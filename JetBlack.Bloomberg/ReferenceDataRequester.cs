@@ -9,25 +9,25 @@ namespace JetBlack.Bloomberg
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
         public bool? ReturnEids { get; set; }
         public bool? ReturnFormattedValue { get; set; }
-        public bool? UseUTCTime { get; set; }
+        public bool? UseUtcTime { get; set; }
         public bool? ForcedDelay { get; set; }
         public override bool MapTickers { get { return false; } }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
-            Request request = refDataService.CreateRequest("ReferenceDataRequest");
+            var request = refDataService.CreateRequest("ReferenceDataRequest");
 
-            foreach (string ticker in Tickers)
+            foreach (var ticker in Tickers)
                 request.Append("securities", ticker);
 
-            foreach (string fieldMnemonic in Fields)
+            foreach (var fieldMnemonic in Fields)
                 request.Append("fields", fieldMnemonic);
 
             if (Overrides != null)
             {
                 foreach (var pair in Overrides)
                 {
-                    Element requestOverride = request["overrides"].AppendElement();
+                    var requestOverride = request["overrides"].AppendElement();
                     requestOverride.SetElement("fieldId", pair.Key);
                     requestOverride.SetElement("value", pair.Value);
                 }
@@ -39,8 +39,8 @@ namespace JetBlack.Bloomberg
                 request.Set("returnEids", ReturnEids.Value);
             if (ReturnFormattedValue.HasValue)
                 request.Set("returnFormattedValue", ReturnFormattedValue.Value);
-            if (UseUTCTime.HasValue)
-                request.Set("useUTCTime", UseUTCTime.Value);
+            if (UseUtcTime.HasValue)
+                request.Set("useUTCTime", UseUtcTime.Value);
 
             return new[] { request };
         }

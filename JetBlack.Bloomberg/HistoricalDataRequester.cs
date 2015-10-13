@@ -22,19 +22,19 @@ namespace JetBlack.Bloomberg
         public bool? AdjustmentNormal { get; set; }
         public bool? AdjustmentAbnormal { get; set; }
         public bool? AdjustmentSplit { get; set; }
-        public bool? AdjustmentFollowDPDF { get; set; }
+        public bool? AdjustmentFollowDpdf { get; set; }
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
         public override bool MapTickers { get { return true; } }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
-            Request request = refDataService.CreateRequest("HistoricalDataRequest");
+            var request = refDataService.CreateRequest("HistoricalDataRequest");
 
-            foreach (string ticker in Tickers)
+            foreach (var ticker in Tickers)
                 request.Append("securities", ticker);
 
-            foreach (string field in Fields)
+            foreach (var field in Fields)
                 request.Append("fields", field);
 
             request.Set("startDate", StartDate.ToString("yyyyMMdd"));
@@ -63,8 +63,8 @@ namespace JetBlack.Bloomberg
                 request.Set("adjustmentAbnormal", AdjustmentAbnormal.Value);
             if (AdjustmentSplit.HasValue)
                 request.Set("adjustmentSplit", AdjustmentSplit.Value);
-            if (AdjustmentFollowDPDF.HasValue)
-                request.Set("adjustmentFollowDPDF", AdjustmentFollowDPDF.Value);
+            if (AdjustmentFollowDpdf.HasValue)
+                request.Set("adjustmentFollowDPDF", AdjustmentFollowDpdf.Value);
             if (CalendarCodeOverride.HasValue)
                 request.Set("calendarCodeOverride", CalendarCodeOverride.Value);
 
@@ -72,7 +72,7 @@ namespace JetBlack.Bloomberg
             {
                 foreach (var pair in Overrides)
                 {
-                    Element requestOverride = request["overrides"].AppendElement();
+                    var requestOverride = request["overrides"].AppendElement();
                     requestOverride.SetElement("fieldId", pair.Key);
                     requestOverride.SetElement("value", pair.Value);
                 }

@@ -16,16 +16,16 @@ namespace JetBlack.Bloomberg
         public bool? AdjustmentNormal { get; set; }
         public bool? AdjustmentAbnormal { get; set; }
         public bool? AdjustmentSplit { get; set; }
-        public bool? AdjustmentFollowDPDF { get; set; }
+        public bool? AdjustmentFollowDpdf { get; set; }
         public override bool MapTickers { get { return true; } }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
-            List<Request> requests = new List<Request>();
+            var requests = new List<Request>();
 
-            foreach (string ticker in Tickers)
+            foreach (var ticker in Tickers)
             {
-                Request request = refDataService.CreateRequest("IntradayBarRequest");
+                var request = refDataService.CreateRequest("IntradayBarRequest");
 
                 request.Set("security", ticker);
                 request.Set("startDateTime", new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
@@ -45,8 +45,8 @@ namespace JetBlack.Bloomberg
                     request.Set("adjustmentAbnormal", AdjustmentAbnormal.Value);
                 if (AdjustmentSplit.HasValue)
                     request.Set("adjustmentSplit", AdjustmentSplit.Value);
-                if (AdjustmentFollowDPDF.HasValue)
-                    request.Set("adjustmentFollowDPDF", AdjustmentFollowDPDF.Value);
+                if (AdjustmentFollowDpdf.HasValue)
+                    request.Set("adjustmentFollowDPDF", AdjustmentFollowDpdf.Value);
 
                 requests.Add(request);
             }

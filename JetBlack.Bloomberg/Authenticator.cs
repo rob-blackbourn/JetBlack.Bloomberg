@@ -10,74 +10,74 @@ namespace JetBlack.Bloomberg
 {
     internal class Authenticator : IAuthenticator
     {
-        private Session session;
-        private Service apiAuthService;
-        private UserHandle userHandle;
-        private AuthenticationState authenticationState = AuthenticationState.Pending;
-        private EventWaitHandle autoResetEvent = new AutoResetEvent(false);
-        private string clientHostname;
-        private string uuid;
+        private readonly Session _session;
+        private Service _apiAuthService;
+        private UserHandle _userHandle;
+        private AuthenticationState _authenticationState = AuthenticationState.Pending;
+        private readonly EventWaitHandle _autoResetEvent = new AutoResetEvent(false);
+        private readonly string _clientHostname;
+        private readonly string _uuid;
 
         public Authenticator(Session session, BloombergWrapper wrapper, string clientHostname, string uuid)
         {
-            this.uuid = uuid;
-            this.clientHostname = clientHostname;
-            this.session = session;
-            wrapper.OnAuthenticationStatus += wrapper_OnAuthenticationStatus;
+            _uuid = uuid;
+            _clientHostname = clientHostname;
+            _session = session;
+            wrapper.OnAuthenticationStatus += OnAuthenticationStatus;
         }
 
-        private void wrapper_OnAuthenticationStatus(bool isSuccess)
+        private void OnAuthenticationStatus(bool isSuccess)
         {
-            authenticationState = isSuccess ? AuthenticationState.Succeeded : AuthenticationState.Failed;
-            autoResetEvent.Set();
+            _authenticationState = isSuccess ? AuthenticationState.Succeeded : AuthenticationState.Failed;
+            _autoResetEvent.Set();
         }
 
         public bool Authorise()
         {
-            if (!session.OpenService("//blp/apiauth"))
+            if (!_session.OpenService("//blp/apiauth"))
                 throw new Exception("Failed to open service \"//blp/apiAuth\"");
-            apiAuthService = session.GetService("//blp/apiauth");
+            _apiAuthService = _session.GetService("//blp/apiauth");
 
-            Request authorizationRequest = apiAuthService.CreateAuthorizationRequest();
+            var authorizationRequest = _apiAuthService.CreateAuthorizationRequest();
             string clientIpAddress;
 
             try
             {
-                IPHostEntry ipEntry = Dns.GetHostEntry(clientHostname ?? String.Empty);
-                IPAddress[] ipAddresses = ipEntry.AddressList;
-                IPAddress ipAddress = ipAddresses.First(addr => addr.AddressFamily == AddressFamily.InterNetwork);
+                var ipEntry = Dns.GetHostEntry(_clientHostname ?? String.Empty);
+                var ipAddresses = ipEntry.AddressList;
+                var ipAddress = ipAddresses.First(addr => addr.AddressFamily == AddressFamily.InterNetwork);
                 clientIpAddress = ipAddress.ToString();
             }
             catch
             {
-                throw new ApplicationException(string.Format("Could not find ipaddress for hostname {0}", clientHostname));
+                throw new ApplicationException(string.Format("Could not find ipaddress for hostname {0}", _clientHostname));
             }
 
-            authorizationRequest.Set("uuid", uuid);
+            authorizationRequest.Set("uuid", _uuid);
             authorizationRequest.Set("ipAddress", clientIpAddress);
 
-            lock (session)
+            lock (_session)
             {
-                userHandle = session.CreateUserHandle();
-                CorrelationID correlationId = new CorrelationID(-1000);
-                session.SendAuthorizationRequest(authorizationRequest, userHandle, correlationId);
+                _userHandle = _session.CreateUserHandle();
+                var correlationId = new CorrelationID(-1000);
+                _session.SendAuthorizationRequest(authorizationRequest, _userHandle, correlationId);
             }
 
-            autoResetEvent.WaitOne();
-            return authenticationState == AuthenticationState.Succeeded;
+            _autoResetEvent.WaitOne();
+            return _authenticationState == AuthenticationState.Succeeded;
         }
 
         public bool Permits(Element eidData, Service service)
         {
-            if (authenticationState != AuthenticationState.Succeeded) return false;
+            if (_authenticationState != AuthenticationState.Succeeded) return false;
             if (eidData == null) return true;
-            List<int> missingEntitlements = new List<int>();
-            return userHandle.HasEntitlements(eidData, service, missingEntitlements);
+            var missingEntitlements = new List<int>();
+            return _userHandle.HasEntitlements(eidData, service, missingEntitlements);
         }
 
         public AuthenticationState AuthenticationState
         {
-            get { return authenticationState; }
+            get { return _authenticationState; }
         }
     }
 }

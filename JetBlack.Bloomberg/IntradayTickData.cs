@@ -15,8 +15,8 @@ namespace JetBlack.Bloomberg
 
         public override string ToString()
         {
-            string conditionsCodes = ConditionCodes == null ? string.Empty : string.Join(",", new List<string>(ConditionCodes).ToArray());
-            string exchangeCodes = ExchangeCodes == null ? string.Empty : string.Join(",", (new List<string>(ExchangeCodes)).ToArray());
+            var conditionsCodes = ConditionCodes == null ? string.Empty : string.Join(",", new List<string>(ConditionCodes).ToArray());
+            var exchangeCodes = ExchangeCodes == null ? string.Empty : string.Join(",", (new List<string>(ExchangeCodes)).ToArray());
             return string.Format("Time={0}, EventType={1}, Value={2}, Size={3}, Condition Codes={4}, Exchange Codes={5}",
                 Time.ToString("yyyy-MM-dd hh:mm:ss"), EventType, Value, Size, conditionsCodes, exchangeCodes);
         }

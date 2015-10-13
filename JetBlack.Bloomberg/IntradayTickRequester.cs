@@ -19,11 +19,11 @@ namespace JetBlack.Bloomberg
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
-            List<Request> requests = new List<Request>();
+            var requests = new List<Request>();
 
-            foreach (string ticker in Tickers)
+            foreach (var ticker in Tickers)
             {
-                Request request = refDataService.CreateRequest("IntradayTickRequest");
+                var request = refDataService.CreateRequest("IntradayTickRequest");
                 request.Set("security", ticker);
 
                 foreach (var eventType in EventTypes)
