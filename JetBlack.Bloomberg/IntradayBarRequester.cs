@@ -1,0 +1,57 @@
+﻿using Bloomberglp.Blpapi;
+using System;
+using System.Collections.Generic;
+
+namespace JetBlack.Bloomberg
+{
+    public class IntradayBarRequester : Requester
+    {
+        public DateTime StartDateTime { get; set; }
+        public DateTime EndDateTime { get; set; }
+        public EventType EventType { get; set; }
+        public int? Interval { get; set; }
+        public bool? GapFillInitialBar { get; set; }
+        public bool? ReturnEids { get; set; }
+        public bool? ReturnRelativeDate { get; set; }
+        public bool? AdjustmentNormal { get; set; }
+        public bool? AdjustmentAbnormal { get; set; }
+        public bool? AdjustmentSplit { get; set; }
+        public bool? AdjustmentFollowDPDF { get; set; }
+        public override bool MapTickers { get { return true; } }
+
+        public override IEnumerable<Request> CreateRequests(Service refDataService)
+        {
+            List<Request> requests = new List<Request>();
+
+            foreach (string ticker in Tickers)
+            {
+                Request request = refDataService.CreateRequest("IntradayBarRequest");
+
+                request.Set("security", ticker);
+                request.Set("startDateTime", new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
+                request.Set("endDateTime", new Datetime(EndDateTime.Year, EndDateTime.Month, EndDateTime.Day, EndDateTime.Hour, EndDateTime.Minute, EndDateTime.Second, EndDateTime.Millisecond));
+                request.Set("eventType", EventType.ToString());
+                if (Interval.HasValue)
+                    request.Set("interval", Interval.Value);
+                if (GapFillInitialBar.HasValue)
+                    request.Set("gapFillInitialBar", GapFillInitialBar.Value);
+                if (ReturnEids.HasValue)
+                    request.Set("returnEids", ReturnEids.Value);
+                if (ReturnRelativeDate.HasValue)
+                    request.Set("returnRelativeDate", ReturnRelativeDate.Value);
+                if (AdjustmentNormal.HasValue)
+                    request.Set("adjustmentNormal", AdjustmentNormal.Value);
+                if (AdjustmentAbnormal.HasValue)
+                    request.Set("adjustmentAbnormal", AdjustmentAbnormal.Value);
+                if (AdjustmentSplit.HasValue)
+                    request.Set("adjustmentSplit", AdjustmentSplit.Value);
+                if (AdjustmentFollowDPDF.HasValue)
+                    request.Set("adjustmentFollowDPDF", AdjustmentFollowDPDF.Value);
+
+                requests.Add(request);
+            }
+
+            return requests;
+        }
+    }
+}
