@@ -12,7 +12,7 @@ namespace JetBlack.Bloomberg
     {
         private readonly Session _session;
         private Service _apiAuthService;
-        private UserHandle _userHandle;
+        private Identity _identity;
         private AuthenticationState _authenticationState = AuthenticationState.Pending;
         private readonly EventWaitHandle _autoResetEvent = new AutoResetEvent(false);
         private readonly string _clientHostname;
@@ -20,9 +20,9 @@ namespace JetBlack.Bloomberg
 
         public Authenticator(Session session, BloombergWrapper wrapper, string clientHostname, string uuid)
         {
+            _session = session;
             _uuid = uuid;
             _clientHostname = clientHostname;
-            _session = session;
             wrapper.OnAuthenticationStatus += OnAuthenticationStatus;
         }
 
@@ -58,9 +58,9 @@ namespace JetBlack.Bloomberg
 
             lock (_session)
             {
-                _userHandle = _session.CreateUserHandle();
+                _identity = _session.CreateIdentity();
                 var correlationId = new CorrelationID(-1000);
-                _session.SendAuthorizationRequest(authorizationRequest, _userHandle, correlationId);
+                _session.SendAuthorizationRequest(authorizationRequest, _identity, correlationId);
             }
 
             _autoResetEvent.WaitOne();
@@ -72,7 +72,7 @@ namespace JetBlack.Bloomberg
             if (_authenticationState != AuthenticationState.Succeeded) return false;
             if (eidData == null) return true;
             var missingEntitlements = new List<int>();
-            return _userHandle.HasEntitlements(eidData, service, missingEntitlements);
+            return _identity.HasEntitlements(eidData, service, missingEntitlements);
         }
 
         public AuthenticationState AuthenticationState
