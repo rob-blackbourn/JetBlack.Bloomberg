@@ -14,7 +14,6 @@ namespace JetBlack.Bloomberg
         public event EventHandler<IntradayTickDataReceivedEventArgs> OnIntradayTickDataReceived;
         public event EventHandler<ErrorResponseEventArgs> OnNotifyErrorResponse;
         public event EventHandler<SessionStatusEventArgs> OnSessionStatus;
-        public event EventHandler<ServiceStatusEventArgs> OnServiceStatus;
         public event EventHandler<AdminStatusEventArgs> OnAdminStatus;
         public event EventHandler<SubscriptionStatusEventArgs> OnSubscriptionStatus;
         public event EventHandler<FieldSubscriptionStatusEventArgs> OnFieldSubscriptionStatus;
@@ -31,20 +30,16 @@ namespace JetBlack.Bloomberg
         private readonly Dictionary<CorrelationID, IList<IntradayBar>> _intradayBarCache = new Dictionary<CorrelationID, IList<IntradayBar>>();
 
         private readonly TokenManager _tokenManager = new TokenManager();
+        private readonly ServiceManager _serviceManager = new ServiceManager();
 
         private int _lastCorrelationId;
 
         public BloombergWrapper()
-            : this(null, 0, null, null)
+            : this(null, 0)
         {
         }
 
-        public BloombergWrapper(string serverHostname, int serverPort, string uuid)
-            : this(serverHostname, serverPort, null, uuid)
-        {
-        }
-
-        public BloombergWrapper(string serverHostname, int serverPort, string clientHostname, string uuid)
+        public BloombergWrapper(string serverHostname, int serverPort)
         {
             var sessionOptions = new SessionOptions();
 
@@ -70,7 +65,7 @@ namespace JetBlack.Bloomberg
 #if NO_AUTHENTICATION
                 authenticator = new PassingAuthenticator();
 #else
-                _authenticator = new Authenticator(_session, this, clientHostname, uuid);
+                _authenticator = new Authenticator(this);
 #endif
             }
 
@@ -86,17 +81,17 @@ namespace JetBlack.Bloomberg
                 if (!_session.Start())
                     throw new Exception("Failed to start session");
 
-                if (!_session.OpenService("//blp/mktdata"))
-                    throw new Exception("Failed to open service \"//blp/mktdata\"");
-                _mktDataService = _session.GetService("//blp/mktdata");
-
-                if (!_session.OpenService("//blp/refdata"))
-                    throw new Exception("Failed to open service \"//blp/refdata\"");
-                _refDataService = _session.GetService("//blp/refdata");
+                _mktDataService = OpenService("//blp/mktdata");
+                _refDataService = OpenService("//blp/refdata");
             }
 #if NO_AUTHENTICATION
             authenticator.Authorise();
 #endif
+        }
+
+        public void StartAsync()
+        {
+            _session.StartAsync();
         }
 
         public void Stop()
@@ -110,9 +105,19 @@ namespace JetBlack.Bloomberg
             return _tokenManager.GenerateToken(_session);
         }
 
-        public void GenerateToken(Action<Session, TokenGenerationSuccessEventArgs> onSuccess, Action<Session, TokenGenerationFailureEventArgs> onFailure)
+        public void GenerateToken(Action<SessionEventArgs<TokenGenerationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<TokenGenerationFailureEventArgs>> onFailure)
         {
             _tokenManager.GenerateToken(_session, onSuccess, onFailure);
+        }
+
+        public Service OpenService(string uri)
+        {
+            return _serviceManager.Open(_session, uri);
+        }
+
+        public void OpenService(string uri, Action<SessionEventArgs<ServiceOpenedEventArgs>> onSuccess, Action<SessionEventArgs<ServiceOpenFailureEventArgs>> onFailure)
+        {
+            _serviceManager.Open(_session, uri, onSuccess, onFailure);
         }
 
         public void Desubscribe(CorrelationID correlationId)
@@ -259,7 +264,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        ProcessServiceStatus(eventArgs);
+                        eventArgs.GetMessages().ForEach(message => _serviceManager.ProcessServiceStatusEvent(session, message, OnFailure));
                         break;
 
                     case Event.EventType.ADMIN:
@@ -669,25 +674,6 @@ namespace JetBlack.Bloomberg
                                     desc));
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        private void ProcessServiceStatus(Event e)
-        {
-            if (e.IsValid)
-            {
-                foreach (var m in e.GetMessages())
-                {
-                    switch (m.MessageType.ToString())
-                    {
-                        case "ServiceOpened":
-                            RaiseEvent(OnServiceStatus, new ServiceStatusEventArgs(m.TopicName, ServiceStatus.Opened));
-                            break;
-                        case "ServiceClosed":
-                            RaiseEvent(OnServiceStatus, new ServiceStatusEventArgs(m.TopicName, ServiceStatus.Closed));
-                            break;
                     }
                 }
             }

@@ -19,6 +19,7 @@ namespace JetBlack.Bloomberg
         public static readonly Name Security = new Name("security");
         public static readonly Name SecurityData = new Name("securityData");
         public static readonly Name SecurityError = new Name("securityError");
+        public static readonly Name ServiceName = Name.GetName("serviceName");
         public static readonly Name Source = new Name("source");
         public static readonly Name SubCategory = new Name("subcategory");
         public static readonly Name TickData = new Name("tickData");

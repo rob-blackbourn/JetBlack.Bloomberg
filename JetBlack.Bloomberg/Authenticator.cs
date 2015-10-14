@@ -11,19 +11,13 @@ namespace JetBlack.Bloomberg
 {
     internal class Authenticator : IAuthenticator
     {
-        private readonly Session _session;
         private Service _apiAuthService;
         private Identity _identity;
         private AuthenticationState _authenticationState = AuthenticationState.Pending;
         private readonly EventWaitHandle _autoResetEvent = new AutoResetEvent(false);
-        private readonly string _clientHostname;
-        private readonly string _uuid;
 
-        public Authenticator(Session session, BloombergWrapper wrapper, string clientHostname, string uuid)
+        public Authenticator(BloombergWrapper wrapper)
         {
-            _session = session;
-            _uuid = uuid;
-            _clientHostname = clientHostname;
             wrapper.OnAuthenticationStatus += OnAuthenticationStatus;
         }
 
@@ -33,36 +27,33 @@ namespace JetBlack.Bloomberg
             _autoResetEvent.Set();
         }
 
-        public bool Authorise()
+        public bool Authenticate(Session session, string clientHostname, string uuid)
         {
-            if (!_session.OpenService("//blp/apiauth"))
+            if (!session.OpenService("//blp/apiauth"))
                 throw new Exception("Failed to open service \"//blp/apiAuth\"");
-            _apiAuthService = _session.GetService("//blp/apiauth");
+            _apiAuthService = session.GetService("//blp/apiauth");
 
             var authorizationRequest = _apiAuthService.CreateAuthorizationRequest();
             string clientIpAddress;
 
             try
             {
-                var ipEntry = Dns.GetHostEntry(_clientHostname ?? String.Empty);
+                var ipEntry = Dns.GetHostEntry(clientHostname ?? String.Empty);
                 var ipAddresses = ipEntry.AddressList;
                 var ipAddress = ipAddresses.First(addr => addr.AddressFamily == AddressFamily.InterNetwork);
                 clientIpAddress = ipAddress.ToString();
             }
             catch
             {
-                throw new ApplicationException(string.Format("Could not find ipaddress for hostname {0}", _clientHostname));
+                throw new ApplicationException(string.Format("Could not find ipaddress for hostname {0}", clientHostname));
             }
 
-            authorizationRequest.Set("uuid", _uuid);
+            authorizationRequest.Set("uuid", uuid);
             authorizationRequest.Set("ipAddress", clientIpAddress);
 
-            lock (_session)
-            {
-                _identity = _session.CreateIdentity();
-                var correlationId = new CorrelationID(-1000);
-                _session.SendAuthorizationRequest(authorizationRequest, _identity, correlationId);
-            }
+            _identity = session.CreateIdentity();
+            var correlationId = new CorrelationID(-1000);
+            session.SendAuthorizationRequest(authorizationRequest, _identity, correlationId);
 
             _autoResetEvent.WaitOne();
             return _authenticationState == AuthenticationState.Succeeded;

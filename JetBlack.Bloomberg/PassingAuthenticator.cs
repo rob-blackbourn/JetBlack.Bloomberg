@@ -4,7 +4,7 @@ namespace JetBlack.Bloomberg
 {
     internal class PassingAuthenticator : IAuthenticator
     {
-        public bool Authorise()
+        public bool Authenticate(Session session, string clientHostname, string uuid)
         {
             return true;
         }

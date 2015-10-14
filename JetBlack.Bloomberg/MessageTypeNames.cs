@@ -10,6 +10,8 @@ namespace JetBlack.Bloomberg
         public static readonly Name IntradayTickResponse = new Name("IntradayTickResponse");
         public static readonly Name HistoricalDataResponse = new Name("HistoricalDataResponse");
         public static readonly Name ReferenceDataResponse = new Name("ReferenceDataResponse");
+        public static readonly Name ServiceOpened = Name.GetName("ServiceOpened");
+        public static readonly Name ServiceOpenFailure = Name.GetName("ServiceOpenFailure");
         public static readonly Name TokenGenerationFailure = Name.GetName("TokenGenerationFailure");
         public static readonly Name TokenGenerationSuccess = Name.GetName("TokenGenerationSuccess");
     }
