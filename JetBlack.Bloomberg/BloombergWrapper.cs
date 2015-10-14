@@ -8,8 +8,6 @@ namespace JetBlack.Bloomberg
 {
     public class BloombergWrapper
     {
-        #region Events
-
         public event DataReceivedEventHandler OnDataReceived;
         public event HistoricalDataReceivedEventHandler OnHistoricalDataReceived;
         public event IntradayBarReceivedEventHandler OnIntradayBarReceived;
@@ -24,55 +22,15 @@ namespace JetBlack.Bloomberg
         public event AuthenticationEventHandler OnAuthenticationStatus;
         public event AuthenticationErrorEventHandler OnAuthorisationError;
 
-        #endregion
-
-        #region Private Fields
-
         private readonly Session _session;
         private Service _mktDataService, _refDataService;
         private readonly Dictionary<CorrelationID, ICollection<string>> _requestMap = new Dictionary<CorrelationID, ICollection<string>>();
         private readonly IAuthenticator _authenticator;
-        private string _uuid;
 
         private readonly Dictionary<CorrelationID, IList<IntradayTickData>> _intradayTickDataCache = new Dictionary<CorrelationID, IList<IntradayTickData>>();
         private readonly Dictionary<CorrelationID, IList<IntradayBar>> _intradayBarCache = new Dictionary<CorrelationID, IList<IntradayBar>>();
 
         private int _lastCorrelationId;
-
-        #endregion
-
-        #region Element Names
-
-        private static readonly Name Category = new Name("category");
-        private static readonly Name Code = new Name("code");
-        private static readonly Name Description = new Name("description");
-        private static readonly Name ErrorInfo = new Name("errorInfo");
-        private static readonly Name ErrorCode = new Name("errorCode");
-        private static readonly Name Exceptions = new Name("exceptions");
-        private static readonly Name FieldData = new Name("fieldData");
-        private static readonly Name FieldExceptions = new Name("fieldExceptions");
-        private static readonly Name FieldId = new Name("fieldId");
-        private static readonly Name Message = new Name("message");
-        private static readonly Name Reason = new Name("reason");
-        private static readonly Name ResponseError = new Name("responseError");
-        private static readonly Name Security = new Name("security");
-        private static readonly Name SecurityData = new Name("securityData");
-        private static readonly Name SecurityError = new Name("securityError");
-        private static readonly Name Source = new Name("source");
-        private static readonly Name SubCategory = new Name("subcategory");
-        private static readonly Name TickData = new Name("tickData");
-
-        private static readonly Name ReferenceDataResponse = new Name("ReferenceDataResponse");
-        private static readonly Name HistoricalDataResponse = new Name("HistoricalDataResponse");
-        private static readonly Name IntradayTickResponse = new Name("IntradayTickResponse");
-        private static readonly Name IntradayBarResponse = new Name("IntradayBarResponse");
-
-        private static readonly Name AuthorizationFailure = new Name("AuthorizationFailure");
-        private static readonly Name AuthorizationSuccess = new Name("AuthorizationSuccess");
-
-        #endregion
-
-        #region Constructors
 
         public BloombergWrapper()
             : this(null, 0, null, null)
@@ -87,7 +45,7 @@ namespace JetBlack.Bloomberg
         public BloombergWrapper(string serverHostname, int serverPort, string clientHostname, string uuid)
         {
             var sessionOptions = new SessionOptions();
-            _uuid = uuid;
+
             if (serverHostname == null)
             {
                 sessionOptions.ClientMode = SessionOptions.ClientModeType.DAPI;
@@ -116,8 +74,6 @@ namespace JetBlack.Bloomberg
 
             _lastCorrelationId = 0;
         }
-
-        #endregion
 
         #region Public Methods
 
@@ -313,40 +269,33 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private void ProcessAuthorisationMessage(Message m)
+        private void ProcessAuthorisationMessage(Message message)
         {
-            if (m.MessageType.Equals(AuthorizationFailure))
-            {
+            if (message.MessageType.Equals(ElementNames.AuthorizationFailure))
                 OnAuthenticationStatus(false);
-            }
-            else if (m.MessageType.Equals(AuthorizationSuccess))
-            {
+            else if (message.MessageType.Equals(ElementNames.AuthorizationSuccess))
                 OnAuthenticationStatus(true);
-            }
             else
-            {
                 OnAuthenticationStatus(false);
-            }
         }
 
         private void ProcessAdminMessage(Event e)
         {
-            if (e.IsValid)
+            if (!e.IsValid) return;
+
+            foreach (var message in e.GetMessages())
             {
-                foreach (var m in e.GetMessages())
+                switch (message.MessageType.ToString())
                 {
-                    switch (m.MessageType.ToString())
-                    {
-                        case "SlowConsumerWarning":
-                            NotifyAdminStatus(AdminStatus.SlowConsumerWarning);
-                            break;
-                        case "SlowConsumerWarningCleared":
-                            NotifyAdminStatus(AdminStatus.SlowConsumerWarningCleared);
-                            break;
-                        default:
-                            Trace.TraceWarning("unknown message type {0}", m.MessageType);
-                            break;
-                    }
+                    case "SlowConsumerWarning":
+                        NotifyAdminStatus(AdminStatus.SlowConsumerWarning);
+                        break;
+                    case "SlowConsumerWarningCleared":
+                        NotifyAdminStatus(AdminStatus.SlowConsumerWarningCleared);
+                        break;
+                    default:
+                        Trace.TraceWarning("unknown message type {0}", message.MessageType);
+                        break;
                 }
             }
         }
@@ -361,15 +310,15 @@ namespace JetBlack.Bloomberg
 
             foreach (var m in e.GetMessages())
             {
-                if (m.MessageType.Equals(AuthorizationFailure) || m.MessageType.Equals(AuthorizationSuccess))
+                if (m.MessageType.Equals(ElementNames.AuthorizationFailure) || m.MessageType.Equals(ElementNames.AuthorizationSuccess))
                     ProcessAuthorisationMessage(m);
-                if (m.MessageType.Equals(IntradayBarResponse))
+                if (m.MessageType.Equals(ElementNames.IntradayBarResponse))
                     ProcessIntradayBarResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(IntradayTickResponse))
+                else if (m.MessageType.Equals(ElementNames.IntradayTickResponse))
                     ProcessIntradayTickResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(HistoricalDataResponse))
+                else if (m.MessageType.Equals(ElementNames.HistoricalDataResponse))
                     ProcessHistoricalDataResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(ReferenceDataResponse))
+                else if (m.MessageType.Equals(ElementNames.ReferenceDataResponse))
                     ProcessReferenceDataResponse(m, isPartialResponse);
             }
         }
@@ -397,12 +346,12 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private IList<int> ExtractEids(Element eidDataElement)
+        private static IList<int> ExtractEids(Element eidDataElement)
         {
             var eids = new List<int>();
-            for (int i = 0; i < eidDataElement.NumValues; ++i)
+            for (var i = 0; i < eidDataElement.NumValues; ++i)
             {
-                int eid = eidDataElement.GetValueAsInt32(i);
+                var eid = eidDataElement.GetValueAsInt32(i);
                 eids.Add(eid);
             }
             return eids;
@@ -410,27 +359,27 @@ namespace JetBlack.Bloomberg
 
         private bool AssertResponseError(Message m, string name)
         {
-            if (!m.HasElement(ResponseError)) return false;
-            OnNotifyErrorResponse(name, m.MessageType.ToString(), string.Format("RESPONSE_ERROR: {0}", m.GetElement(ResponseError)));
+            if (!m.HasElement(ElementNames.ResponseError)) return false;
+            OnNotifyErrorResponse(name, m.MessageType.ToString(), string.Format("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError)));
             return true;
         }
 
-        private Element ExtractEidElement(Element parent)
+        private static Element ExtractEidElement(Element parent)
         {
             return parent.HasElement("eidData") ? parent.GetElement("eidData") : null;
         }
 
-        private void ProcessIntradayBarResponse(Message m, bool isPartialResponse)
+        private void ProcessIntradayBarResponse(Message message, bool isPartialResponse)
         {
-            var ticker = ExtractTicker(m.CorrelationID, isPartialResponse);
-            if (AssertResponseError(m, ticker)) return;
+            var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
+            if (AssertResponseError(message, ticker)) return;
 
-            var barData = m.GetElement("barData");
+            var barData = message.GetElement("barData");
             var barTickData = barData.GetElement("barTickData");
 
-            if (!_intradayBarCache.ContainsKey(m.CorrelationID))
-                _intradayBarCache.Add(m.CorrelationID, new List<IntradayBar>());
-            var intradayBars = _intradayBarCache[m.CorrelationID];
+            if (!_intradayBarCache.ContainsKey(message.CorrelationID))
+                _intradayBarCache.Add(message.CorrelationID, new List<IntradayBar>());
+            var intradayBars = _intradayBarCache[message.CorrelationID];
 
             var eidDataElement = ExtractEidElement(barData);
 
@@ -452,11 +401,11 @@ namespace JetBlack.Bloomberg
 
             if (!isPartialResponse)
             {
-                _intradayBarCache.Remove(m.CorrelationID);
-                if (_authenticator.Permits(eidDataElement, m.Service))
+                _intradayBarCache.Remove(message.CorrelationID);
+                if (_authenticator.Permits(eidDataElement, message.Service))
                     NotifyIntradayBarReceived(ticker, intradayBars, ExtractEids(eidDataElement));
                 else
-                    NotifyAuthenticationError(ticker, m.MessageType.ToString(), ExtractEids(eidDataElement));
+                    NotifyAuthenticationError(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement));
             }
         }
 
@@ -493,7 +442,6 @@ namespace JetBlack.Bloomberg
             if (!isPartialResponse)
             {
                 _intradayTickDataCache.Remove(m.CorrelationID);
-                var missingEntitlements = new List<int>();
                 if (_authenticator.Permits(eidDataElement, m.Service))
                     NotifyIntradayTickDataReceived(ticker, intradayTickData, ExtractEids(eidDataElement));
                 else
@@ -501,17 +449,17 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private void ProcessHistoricalDataResponse(Message m, bool isPartialResponse)
+        private void ProcessHistoricalDataResponse(Message message, bool isPartialResponse)
         {
-            if (m.HasElement(ResponseError))
+            if (message.HasElement(ElementNames.ResponseError))
             {
-                Trace.TraceInformation("RESPONSE_ERROR: {0}", m.GetElement(ResponseError));
+                Trace.TraceInformation("RESPONSE_ERROR: {0}", message.GetElement(ElementNames.ResponseError));
                 return;
             }
 
-            var securityDataArray = m.GetElement(SecurityData);
+            var securityDataArray = message.GetElement(ElementNames.SecurityData);
 
-            for (int i = 0; i < securityDataArray.NumValues; ++i)
+            for (var i = 0; i < securityDataArray.NumValues; ++i)
             {
                 var securityData = securityDataArray.GetElement(i);
                 var ticker = securityData.GetValueAsString();
@@ -522,15 +470,15 @@ namespace JetBlack.Bloomberg
                     NotifyResponseStatus(
                         ticker,
                         ResponseStatus.InvalidSecurity,
-                        securityError.GetElement(Source).GetValueAsString(),
-                        securityError.GetElement(Category).GetValueAsString(),
-                        securityError.GetElement(Code).GetValueAsInt32(),
-                        securityError.GetElement(SubCategory).GetValueAsString(),
-                        securityError.GetElement(Message).GetValueAsString());
+                        securityError.GetElement(ElementNames.Source).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Category).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
+                        securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Message).GetValueAsString());
                     continue;
                 }
 
-                var fieldDataArray = securityDataArray.GetElement(FieldData);
+                var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
 
                 var historicalMessageWrapper = new Dictionary<DateTime, IDictionary<string, object>>();
 
@@ -564,34 +512,34 @@ namespace JetBlack.Bloomberg
 
         private void ProcessReferenceDataResponse(Message m, bool isPartialResponse)
         {
-            if (m.HasElement(ResponseError))
+            if (m.HasElement(ElementNames.ResponseError))
             {
-                Trace.TraceInformation("RESPONSE_ERROR: {0}", m.GetElement(ResponseError));
+                Trace.TraceInformation("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError));
                 return;
             }
 
-            var securities = m.GetElement(SecurityData);
+            var securities = m.GetElement(ElementNames.SecurityData);
             for (var i = 0; i < securities.NumValues; ++i)
             {
                 var security = securities.GetValueAsElement(i);
-                var ticker = security.GetElementAsString(Security);
+                var ticker = security.GetElementAsString(ElementNames.Security);
 
-                if (security.HasElement(SecurityError))
+                if (security.HasElement(ElementNames.SecurityError))
                 {
-                    var securityError = security.GetElement(SecurityError);
+                    var securityError = security.GetElement(ElementNames.SecurityError);
                     NotifyResponseStatus(
                         ticker,
                         ResponseStatus.InvalidSecurity,
-                        securityError.GetElement(Source).GetValueAsString(),
-                        securityError.GetElement(Category).GetValueAsString(),
-                        securityError.GetElement(Code).GetValueAsInt32(),
-                        securityError.GetElement(SubCategory).GetValueAsString(),
-                        securityError.GetElement(Message).GetValueAsString());
+                        securityError.GetElement(ElementNames.Source).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Category).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
+                        securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
+                        securityError.GetElement(ElementNames.Message).GetValueAsString());
                     continue;
                 }
 
                 var messageWrapper = new Dictionary<string, object>();
-                var fields = security.GetElement(FieldData);
+                var fields = security.GetElement(ElementNames.FieldData);
                 for (var j = 0; j < fields.NumElements; ++j)
                 {
                     var field = fields.GetElement(j);
@@ -640,9 +588,9 @@ namespace JetBlack.Bloomberg
             {
                 foreach (var m in e.GetMessages())
                 {
-                    if (m.HasElement(Reason))
+                    if (m.HasElement(ElementNames.Reason))
                     {
-                        var reason = m.GetElement(Reason);
+                        var reason = m.GetElement(ElementNames.Reason);
 
                         var status = SubscriptionStatus.None;
 
@@ -669,14 +617,14 @@ namespace JetBlack.Bloomberg
                             NotifySubscriptionStatus(
                                 m.TopicName,
                                 status,
-                                reason.GetElement(Source).GetValueAsString(),
-                                reason.GetElement(Category).GetValueAsString(),
-                                reason.GetElement(ErrorCode).GetValueAsInt32(),
-                                reason.GetElement(Description).GetValueAsString());
+                                reason.GetElement(ElementNames.Source).GetValueAsString(),
+                                reason.GetElement(ElementNames.Category).GetValueAsString(),
+                                reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
+                                reason.GetElement(ElementNames.Description).GetValueAsString());
                         }
                     }
 
-                    if (m.HasElement(Exceptions))
+                    if (m.HasElement(ElementNames.Exceptions))
                     {
                         // Field subscription failures
                         var exceptions = m.GetElement("exceptions");
@@ -698,14 +646,14 @@ namespace JetBlack.Bloomberg
                             for (var i = 0; i < exceptions.NumValues; ++i)
                             {
                                 var exception = exceptions.GetValueAsElement(i);
-                                var fieldId = exception.GetElement(FieldId).GetValueAsString();
-                                var reason = exception.GetElement(Reason);
-                                var source = reason.GetElement(Source).GetValueAsString();
-                                var category = reason.GetElement(Category).GetValueAsString();
-                                var objSubCategory = reason.GetElement(SubCategory);
+                                var fieldId = exception.GetElement(ElementNames.FieldId).GetValueAsString();
+                                var reason = exception.GetElement(ElementNames.Reason);
+                                var source = reason.GetElement(ElementNames.Source).GetValueAsString();
+                                var category = reason.GetElement(ElementNames.Category).GetValueAsString();
+                                var objSubCategory = reason.GetElement(ElementNames.SubCategory);
                                 var subcategory = (objSubCategory != null ? objSubCategory.ToString() : string.Empty);
-                                var errorCode = reason.GetElement(ErrorCode).GetValueAsInt32();
-                                var desc = reason.GetElement(Description).GetValueAsString();
+                                var errorCode = reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32();
+                                var desc = reason.GetElement(ElementNames.Description).GetValueAsString();
 
                                 NotifyFieldSubscriptionStatus(
                                     m.TopicName,
@@ -846,5 +794,35 @@ namespace JetBlack.Bloomberg
         }
 
         #endregion
+
+        static class ElementNames
+        {
+            public static readonly Name Category = new Name("category");
+            public static readonly Name Code = new Name("code");
+            public static readonly Name Description = new Name("description");
+            public static readonly Name ErrorInfo = new Name("errorInfo");
+            public static readonly Name ErrorCode = new Name("errorCode");
+            public static readonly Name Exceptions = new Name("exceptions");
+            public static readonly Name FieldData = new Name("fieldData");
+            public static readonly Name FieldExceptions = new Name("fieldExceptions");
+            public static readonly Name FieldId = new Name("fieldId");
+            public static readonly Name Message = new Name("message");
+            public static readonly Name Reason = new Name("reason");
+            public static readonly Name ResponseError = new Name("responseError");
+            public static readonly Name Security = new Name("security");
+            public static readonly Name SecurityData = new Name("securityData");
+            public static readonly Name SecurityError = new Name("securityError");
+            public static readonly Name Source = new Name("source");
+            public static readonly Name SubCategory = new Name("subcategory");
+            public static readonly Name TickData = new Name("tickData");
+
+            public static readonly Name ReferenceDataResponse = new Name("ReferenceDataResponse");
+            public static readonly Name HistoricalDataResponse = new Name("HistoricalDataResponse");
+            public static readonly Name IntradayTickResponse = new Name("IntradayTickResponse");
+            public static readonly Name IntradayBarResponse = new Name("IntradayBarResponse");
+
+            public static readonly Name AuthorizationFailure = new Name("AuthorizationFailure");
+            public static readonly Name AuthorizationSuccess = new Name("AuthorizationSuccess");
+        }
     }
 }
