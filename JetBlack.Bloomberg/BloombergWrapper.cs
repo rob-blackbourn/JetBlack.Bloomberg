@@ -34,6 +34,7 @@ namespace JetBlack.Bloomberg
 
         private readonly TokenManager _tokenManager = new TokenManager();
         private readonly ServiceManager _serviceManager = new ServiceManager();
+        private readonly SubscriptionManager _subscriptionManager = new SubscriptionManager();
 
         private int _lastCorrelationId;
 
@@ -123,39 +124,9 @@ namespace JetBlack.Bloomberg
             _serviceManager.Open(_session, uri, onSuccess, onFailure);
         }
 
-        public void Desubscribe(CorrelationID correlationId)
+        public IObservable<SessionEventArgs<DataReceivedEventArgs>> ToObservable(IEnumerable<string> tickers, IList<string> fields)
         {
-            lock (_session)
-                _session.Cancel(correlationId);
-        }
-
-        public void Desubscribe(IList<CorrelationID> correlators)
-        {
-            lock (_session)
-                _session.Cancel(correlators);
-        }
-
-        public Dictionary<string, CorrelationID> Subscribe(IEnumerable<string> tickers, IList<string> fields)
-        {
-            lock (_session)
-            {
-                var subscriptions = new Dictionary<string, Subscription>();
-                var realtimeRequestIds = new Dictionary<string, CorrelationID>();
-
-                foreach (string ticker in tickers)
-                {
-                    //Trace.TraceInformation("Asking for ticker: {0}", ticker);
-
-                    var correlationId = new CorrelationID(++_lastCorrelationId);
-                    if (!subscriptions.ContainsKey(ticker))
-                    {
-                        subscriptions.Add(ticker, new Subscription(ticker, fields, correlationId));
-                        realtimeRequestIds.Add(ticker, correlationId);
-                    }
-                }
-                _session.Subscribe(new List<Subscription>(subscriptions.Values));
-                return realtimeRequestIds;
-            }
+            return _subscriptionManager.ToObservable(_session, tickers, fields);
         }
 
         #region Helper Methods
@@ -243,11 +214,11 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        ProcessSubscription(eventArgs);
+                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message));
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:
-                        ProcessSubscriptionStatus(eventArgs);
+                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionStatus(session, message));
                         break;
 
                     case Event.EventType.SESSION_STATUS:
@@ -563,33 +534,6 @@ namespace JetBlack.Bloomberg
                 }
 
                 RaiseEvent(OnDataReceived, new DataReceivedEventArgs(ticker, messageWrapper));
-            }
-        }
-
-        private void ProcessSubscription(Event e)
-        {
-            if (e.IsValid)
-            {
-                foreach (var m in e.GetMessages())
-                {
-                    var messageWrapper = new Dictionary<string, object>();
-
-                    foreach (var field in m.Elements)
-                    {
-                        if (field.IsNull)
-                            continue;
-
-                        var name = field.Name.ToString();
-                        var value = field.GetFieldValue();
-
-                        if (messageWrapper.ContainsKey(name))
-                            messageWrapper[name] = value;
-                        else
-                            messageWrapper.Add(name, value);
-                    }
-
-                    RaiseEvent(OnDataReceived, new DataReceivedEventArgs(m.TopicName, messageWrapper));
-                }
             }
         }
 

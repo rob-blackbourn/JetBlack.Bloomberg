@@ -37,6 +37,18 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.2.5\lib\net40\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.2.5\lib\net40\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.2.5\lib\net40\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.2.5\lib\net40\System.Reactive.PlatformServices.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -66,6 +78,7 @@
     <Compile Include="Messages\AuthorizationFailureEventArgs.cs" />
     <Compile Include="Messages\AuthorizationSuccessEventArgs.cs" />
     <Compile Include="Messages\DataReceivedEventArgs.cs" />
+    <Compile Include="Messages\EventArgsException.cs" />
     <Compile Include="Messages\FieldSubscriptionStatusEventArgs.cs" />
     <Compile Include="Messages\HistoricalDataReceivedEventArgs.cs" />
     <Compile Include="Messages\IntradayBarReceivedEventArgs.cs" />
@@ -76,6 +89,7 @@
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
     <Compile Include="Messages\SessionEventArgs.cs" />
     <Compile Include="Messages\SessionStatusEventArgs.cs" />
+    <Compile Include="Messages\SubscriptionFailureEventArgs.cs" />
     <Compile Include="Messages\SubscriptionStatusEventArgs.cs" />
     <Compile Include="Messages\TokenGenerationFailureEventArgs.cs" />
     <Compile Include="Messages\TokenGenerationSuccessEventArgs.cs" />
@@ -85,9 +99,12 @@
     <Compile Include="Requester.cs" />
     <Compile Include="ServiceManager.cs" />
     <Compile Include="ServiceUris.cs" />
+    <Compile Include="SubscriptionManager.cs" />
     <Compile Include="TokenManager.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

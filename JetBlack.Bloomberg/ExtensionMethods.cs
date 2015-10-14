@@ -119,6 +119,16 @@ namespace JetBlack.Bloomberg
                     reason.GetElementAsString(ElementNames.SubCategory),
                     reason.GetElementAsString(ElementNames.Description));
         }
+
+        public static SubscriptionFailureEventArgs ToSubscriptionFailureEventArgs(this Message message)
+        {
+            var reason = message.GetElement(ElementNames.Reason);
+            return new SubscriptionFailureEventArgs(message.TopicName,
+                reason.GetElement(ElementNames.Source).GetValueAsString(),
+                reason.GetElement(ElementNames.Category).GetValueAsString(),
+                reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
+                reason.GetElement(ElementNames.Description).GetValueAsString());
+        }
     }
 
     public static class KeyValuePair
