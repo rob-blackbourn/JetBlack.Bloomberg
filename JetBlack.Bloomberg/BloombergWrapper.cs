@@ -30,6 +30,8 @@ namespace JetBlack.Bloomberg
         private readonly Dictionary<CorrelationID, IList<IntradayTickData>> _intradayTickDataCache = new Dictionary<CorrelationID, IList<IntradayTickData>>();
         private readonly Dictionary<CorrelationID, IList<IntradayBar>> _intradayBarCache = new Dictionary<CorrelationID, IList<IntradayBar>>();
 
+        private readonly TokenManager _tokenManager = new TokenManager();
+
         private int _lastCorrelationId;
 
         public BloombergWrapper()
@@ -101,6 +103,16 @@ namespace JetBlack.Bloomberg
         {
             lock (_session)
                 _session.Stop();
+        }
+
+        public string GenerateToken()
+        {
+            return _tokenManager.GenerateToken(_session);
+        }
+
+        public void GenerateToken(Action<Session, TokenGenerationSuccessEventArgs> onSuccess, Action<Session, TokenGenerationFailureEventArgs> onFailure)
+        {
+            _tokenManager.GenerateToken(_session, onSuccess, onFailure);
         }
 
         public void Desubscribe(CorrelationID correlationId)
@@ -223,36 +235,41 @@ namespace JetBlack.Bloomberg
 
         #region Private Methods
 
-        private void HandleMessage(Event e, Session s)
+        private void HandleMessage(Event eventArgs, Session session)
         {
             try
             {
-                switch (e.Type)
+                switch (eventArgs.Type)
                 {
                     case Event.EventType.PARTIAL_RESPONSE:
                     case Event.EventType.RESPONSE:
-                        ProcessResponse(e, e.Type == Event.EventType.PARTIAL_RESPONSE);
+                        ProcessResponse(eventArgs, eventArgs.Type == Event.EventType.PARTIAL_RESPONSE);
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        ProcessSubscription(e);
+                        ProcessSubscription(eventArgs);
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:
-                        ProcessSubscriptionStatus(e);
+                        ProcessSubscriptionStatus(eventArgs);
                         break;
 
                     case Event.EventType.SESSION_STATUS:
-                        ProcessSessionStatus(e);
+                        ProcessSessionStatus(eventArgs);
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        ProcessServiceStatus(e);
+                        ProcessServiceStatus(eventArgs);
                         break;
 
                     case Event.EventType.ADMIN:
-                        ProcessAdminMessage(e);
+                        ProcessAdminMessage(eventArgs);
                         break;
+
+                    case Event.EventType.TOKEN_STATUS:
+                        eventArgs.GetMessages().ForEach(message => _tokenManager.ProcessTokenStatusEvent(session, message, OnFailure));
+                        break;
+
                 }
             }
             catch (Exception ex)
@@ -261,11 +278,15 @@ namespace JetBlack.Bloomberg
             }
         }
 
+        private void OnFailure(Session session, Message message, Exception error)
+        {
+        }
+
         private void ProcessAuthorisationMessage(Message message)
         {
-            if (message.MessageType.Equals(ElementNames.AuthorizationFailure))
+            if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure))
                 RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
-            else if (message.MessageType.Equals(ElementNames.AuthorizationSuccess))
+            else if (message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
                 RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(true));
             else
                 RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
@@ -299,15 +320,15 @@ namespace JetBlack.Bloomberg
 
             foreach (var m in e.GetMessages())
             {
-                if (m.MessageType.Equals(ElementNames.AuthorizationFailure) || m.MessageType.Equals(ElementNames.AuthorizationSuccess))
+                if (m.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || m.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
                     ProcessAuthorisationMessage(m);
-                if (m.MessageType.Equals(ElementNames.IntradayBarResponse))
+                if (m.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
                     ProcessIntradayBarResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(ElementNames.IntradayTickResponse))
+                else if (m.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
                     ProcessIntradayTickResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(ElementNames.HistoricalDataResponse))
+                else if (m.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
                     ProcessHistoricalDataResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(ElementNames.ReferenceDataResponse))
+                else if (m.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
                     ProcessReferenceDataResponse(m, isPartialResponse);
             }
         }
@@ -692,35 +713,5 @@ namespace JetBlack.Bloomberg
         }
 
         #endregion
-
-        static class ElementNames
-        {
-            public static readonly Name Category = new Name("category");
-            public static readonly Name Code = new Name("code");
-            public static readonly Name Description = new Name("description");
-            public static readonly Name ErrorInfo = new Name("errorInfo");
-            public static readonly Name ErrorCode = new Name("errorCode");
-            public static readonly Name Exceptions = new Name("exceptions");
-            public static readonly Name FieldData = new Name("fieldData");
-            public static readonly Name FieldExceptions = new Name("fieldExceptions");
-            public static readonly Name FieldId = new Name("fieldId");
-            public static readonly Name Message = new Name("message");
-            public static readonly Name Reason = new Name("reason");
-            public static readonly Name ResponseError = new Name("responseError");
-            public static readonly Name Security = new Name("security");
-            public static readonly Name SecurityData = new Name("securityData");
-            public static readonly Name SecurityError = new Name("securityError");
-            public static readonly Name Source = new Name("source");
-            public static readonly Name SubCategory = new Name("subcategory");
-            public static readonly Name TickData = new Name("tickData");
-
-            public static readonly Name ReferenceDataResponse = new Name("ReferenceDataResponse");
-            public static readonly Name HistoricalDataResponse = new Name("HistoricalDataResponse");
-            public static readonly Name IntradayTickResponse = new Name("IntradayTickResponse");
-            public static readonly Name IntradayBarResponse = new Name("IntradayBarResponse");
-
-            public static readonly Name AuthorizationFailure = new Name("AuthorizationFailure");
-            public static readonly Name AuthorizationSuccess = new Name("AuthorizationSuccess");
-        }
     }
 }

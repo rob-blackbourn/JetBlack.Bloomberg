@@ -45,9 +45,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AsyncSessionCallback.cs" />
     <Compile Include="Authenticator.cs" />
     <Compile Include="BloombergWrapper.cs" />
     <Compile Include="Declarations.cs" />
+    <Compile Include="ElementNames.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="HistoricalDataRequester.cs" />
     <Compile Include="IAuthenticator.cs" />
@@ -68,16 +70,14 @@
     <Compile Include="Messages\ServiceStatusEventArgs.cs" />
     <Compile Include="Messages\SessionStatusEventArgs.cs" />
     <Compile Include="Messages\SubscriptionStatusEventArgs.cs" />
+    <Compile Include="Messages\TokenGenerationFailureEventArgs.cs" />
+    <Compile Include="Messages\TokenGenerationSuccessEventArgs.cs" />
+    <Compile Include="MessageTypeNames.cs" />
     <Compile Include="PassingAuthenticator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReferenceDataRequester.cs" />
     <Compile Include="Requester.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\JetBlack.Diagnostics\JetBlack.Diagnostics.csproj">
-      <Project>{be18c61f-ccd7-4fbc-a8cc-4559d87ce54c}</Project>
-      <Name>JetBlack.Diagnostics</Name>
-    </ProjectReference>
+    <Compile Include="TokenManager.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

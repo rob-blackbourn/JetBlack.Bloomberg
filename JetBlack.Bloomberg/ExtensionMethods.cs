@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Messages;
 
 namespace JetBlack.Bloomberg
 {
@@ -105,6 +107,34 @@ namespace JetBlack.Bloomberg
                 default:
                     return field.GetValue();
             }
+        }
+
+        public static TokenGenerationFailureEventArgs ToTokenGenerationFailureEventArgs(this Element reason)
+        {
+            return
+                new TokenGenerationFailureEventArgs(
+                    reason.GetElementAsString(ElementNames.Source),
+                    reason.GetElementAsInt32(ElementNames.ErrorCode),
+                    reason.GetElementAsString(ElementNames.Category),
+                    reason.GetElementAsString(ElementNames.SubCategory),
+                    reason.GetElementAsString(ElementNames.Description));
+        }
+    }
+
+    public static class KeyValuePair
+    {
+        public static KeyValuePair<TKey, TValue> Create<TKey, TValue>(TKey key, TValue value)
+        {
+            return new KeyValuePair<TKey, TValue>(key, value);
+        }
+    }
+
+    public static class EnumerableExtensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+        {
+            foreach (var item in enumerable)
+                action(item);
         }
     }
 }
