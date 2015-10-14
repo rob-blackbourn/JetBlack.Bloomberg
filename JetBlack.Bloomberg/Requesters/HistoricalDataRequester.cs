@@ -1,8 +1,8 @@
-﻿using Bloomberglp.Blpapi;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Bloomberglp.Blpapi;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Requesters
 {
     public class HistoricalDataRequester : Requester
     {

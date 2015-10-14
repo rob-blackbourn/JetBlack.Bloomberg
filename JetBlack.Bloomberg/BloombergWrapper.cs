@@ -6,20 +6,18 @@ using System.Collections.Generic;
 using System.Linq;
 using JetBlack.Bloomberg.Authenticators;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Requesters;
 
 namespace JetBlack.Bloomberg
 {
     public class BloombergWrapper
     {
-        public event EventHandler<DataReceivedEventArgs> OnDataReceived;
         public event EventHandler<HistoricalDataReceivedEventArgs> OnHistoricalDataReceived;
         public event EventHandler<IntradayBarReceivedEventArgs> OnIntradayBarReceived;
         public event EventHandler<IntradayTickDataReceivedEventArgs> OnIntradayTickDataReceived;
         public event EventHandler<ErrorResponseEventArgs> OnNotifyErrorResponse;
         public event EventHandler<SessionStatusEventArgs> OnSessionStatus;
         public event EventHandler<AdminStatusEventArgs> OnAdminStatus;
-        public event EventHandler<SubscriptionStatusEventArgs> OnSubscriptionStatus;
-        public event EventHandler<FieldSubscriptionStatusEventArgs> OnFieldSubscriptionStatus;
         public event EventHandler<ResponseStatusEventArgs> OnResponseStatus;
         public event EventHandler<AuthenticationStatusEventArgs> OnAuthenticationStatus;
         public event EventHandler<AuthorisationErrorEventArgs> OnAuthorisationError;
@@ -35,6 +33,7 @@ namespace JetBlack.Bloomberg
         private readonly TokenManager _tokenManager = new TokenManager();
         private readonly ServiceManager _serviceManager = new ServiceManager();
         private readonly SubscriptionManager _subscriptionManager = new SubscriptionManager();
+        private readonly ReferenceDataManager _referenceDataManager = new ReferenceDataManager();
 
         private int _lastCorrelationId;
 
@@ -143,14 +142,10 @@ namespace JetBlack.Bloomberg
                 });
         }
 
-        public void RequestReferenceData(ICollection<string> tickers, IEnumerable<string> fields)
+
+        public void RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester, Action<SessionEventArgs<DataReceivedEventArgs>> onSuccess, Action<SessionEventArgs<ErrorResponseEventArgs>> onFailure)
         {
-            Request(
-                new ReferenceDataRequester
-                {
-                    Tickers = tickers,
-                    Fields = fields
-                });
+            _referenceDataManager.Request(_session, _refDataService, requester, onSuccess, onFailure);
         }
 
         public void RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
@@ -291,13 +286,13 @@ namespace JetBlack.Bloomberg
                     _authenticator.Process(session, message, OnFailure);
                     ProcessAuthorisationMessage(message);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    ProcessIntradayBarResponse(message, isPartialResponse);
+                    ProcessIntradayBarResponse(session, message, isPartialResponse);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    ProcessIntradayTickResponse(message, isPartialResponse);
+                    ProcessIntradayTickResponse(session, message, isPartialResponse);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
                     ProcessHistoricalDataResponse(message, isPartialResponse);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    ProcessReferenceDataResponse(message, isPartialResponse);
+                    _referenceDataManager.ProcessReferenceDataResponse(session, message, isPartialResponse);
             }
         }
 
@@ -311,17 +306,6 @@ namespace JetBlack.Bloomberg
                     _requestMap.Remove(correlationId);
             }
             return ticker;
-        }
-
-        private void ExtractTicker(CorrelationID correlationId, string ticker, bool isPartialResponse)
-        {
-            if (isPartialResponse) return;
-            lock (_session)
-            {
-                ICollection<string> tickers = _requestMap[correlationId];
-                tickers.Remove(ticker);
-                if (_requestMap.Count == 0) _requestMap.Remove(correlationId);
-            }
         }
 
         private static IList<int> ExtractEids(Element eidDataElement)
@@ -353,7 +337,7 @@ namespace JetBlack.Bloomberg
             return parent.HasElement("eidData") ? parent.GetElement("eidData") : null;
         }
 
-        private void ProcessIntradayBarResponse(Message message, bool isPartialResponse)
+        private void ProcessIntradayBarResponse(Session session, Message message, bool isPartialResponse)
         {
             var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
             if (AssertResponseError(message, ticker)) return;
@@ -393,17 +377,17 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private void ProcessIntradayTickResponse(Message m, bool isPartialResponse)
+        private void ProcessIntradayTickResponse(Session session, Message message, bool isPartialResponse)
         {
-            var ticker = ExtractTicker(m.CorrelationID, isPartialResponse);
-            if (AssertResponseError(m, ticker)) return;
+            var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
+            if (AssertResponseError(message, ticker)) return;
 
-            var tickData = m.GetElement("tickData");
+            var tickData = message.GetElement("tickData");
             var tickDataArray = tickData.GetElement("tickData");
             var eidDataElement = ExtractEidElement(tickData);
-            if (!_intradayTickDataCache.ContainsKey(m.CorrelationID))
-                _intradayTickDataCache.Add(m.CorrelationID, new List<IntradayTickData>());
-            var intradayTickData = _intradayTickDataCache[m.CorrelationID];
+            if (!_intradayTickDataCache.ContainsKey(message.CorrelationID))
+                _intradayTickDataCache.Add(message.CorrelationID, new List<IntradayTickData>());
+            var intradayTickData = _intradayTickDataCache[message.CorrelationID];
 
             for (var i = 0; i < tickDataArray.NumValues; ++i)
             {
@@ -425,15 +409,15 @@ namespace JetBlack.Bloomberg
 
             if (!isPartialResponse)
             {
-                _intradayTickDataCache.Remove(m.CorrelationID);
-                if (_authenticator.Permits(eidDataElement, m.Service))
+                _intradayTickDataCache.Remove(message.CorrelationID);
+                if (_authenticator.Permits(eidDataElement, message.Service))
                     RaiseEvent(OnIntradayTickDataReceived, new IntradayTickDataReceivedEventArgs(ticker, intradayTickData, ExtractEids(eidDataElement)));
                 else
-                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, m.MessageType.ToString(), ExtractEids(eidDataElement)));
+                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement)));
             }
         }
 
-        private void ProcessHistoricalDataResponse(Message message, bool isPartialResponse)
+        private void ProcessHistoricalDataResponse(Session session, Message message, bool isPartialResponse)
         {
             if (message.HasElement(ElementNames.ResponseError))
             {
@@ -490,128 +474,6 @@ namespace JetBlack.Bloomberg
                 }
 
                 RaiseEvent(OnHistoricalDataReceived, new HistoricalDataReceivedEventArgs(ticker, historicalMessageWrapper));
-            }
-        }
-
-        private void ProcessReferenceDataResponse(Message m, bool isPartialResponse)
-        {
-            if (m.HasElement(ElementNames.ResponseError))
-            {
-                return;
-            }
-
-            var securities = m.GetElement(ElementNames.SecurityData);
-            for (var i = 0; i < securities.NumValues; ++i)
-            {
-                var security = securities.GetValueAsElement(i);
-                var ticker = security.GetElementAsString(ElementNames.Security);
-
-                if (security.HasElement(ElementNames.SecurityError))
-                {
-                    var securityError = security.GetElement(ElementNames.SecurityError);
-                    RaiseEvent(OnResponseStatus, new ResponseStatusEventArgs(
-                        ticker,
-                        ResponseStatus.InvalidSecurity,
-                        securityError.GetElement(ElementNames.Source).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Category).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
-                        securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Message).GetValueAsString()));
-                    continue;
-                }
-
-                var messageWrapper = new Dictionary<string, object>();
-                var fields = security.GetElement(ElementNames.FieldData);
-                for (var j = 0; j < fields.NumElements; ++j)
-                {
-                    var field = fields.GetElement(j);
-                    var name = field.Name.ToString();
-                    var value = field.GetFieldValue();
-                    if (messageWrapper.ContainsKey(name))
-                        messageWrapper[name] = value;
-                    else
-                        messageWrapper.Add(name, value);
-                }
-
-                RaiseEvent(OnDataReceived, new DataReceivedEventArgs(ticker, messageWrapper));
-            }
-        }
-
-        private void ProcessSubscriptionStatus(Event e)
-        {
-            if (e.IsValid)
-            {
-                foreach (var m in e.GetMessages())
-                {
-                    if (m.HasElement(ElementNames.Reason))
-                    {
-                        var reason = m.GetElement(ElementNames.Reason);
-
-                        var status = SubscriptionStatus.None;
-
-                        var messageTypeString = m.MessageType.ToString();
-                        switch (messageTypeString)
-                        {
-                            case "SubscriptionFailure":
-                                status = SubscriptionStatus.Failure;
-                                break;
-                            case "SubscriptionTerminated":
-                                status = SubscriptionStatus.Terminated;
-                                break;
-                        }
-
-                        if (status != SubscriptionStatus.None)
-                        {
-                            RaiseEvent(OnSubscriptionStatus, new SubscriptionStatusEventArgs(
-                                m.TopicName,
-                                status,
-                                reason.GetElement(ElementNames.Source).GetValueAsString(),
-                                reason.GetElement(ElementNames.Category).GetValueAsString(),
-                                reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
-                                reason.GetElement(ElementNames.Description).GetValueAsString()));
-                        }
-                    }
-
-                    if (m.HasElement(ElementNames.Exceptions))
-                    {
-                        // Field subscription failures
-                        var exceptions = m.GetElement("exceptions");
-
-                        var status = FieldSubscriptionStatus.None;
-                        switch (m.MessageType.ToString())
-                        {
-                            case "SubscriptionStarted":
-                                status = FieldSubscriptionStatus.Started;
-                                break;
-                        }
-
-                        if (status != FieldSubscriptionStatus.None)
-                        {
-                            for (var i = 0; i < exceptions.NumValues; ++i)
-                            {
-                                var exception = exceptions.GetValueAsElement(i);
-                                var fieldId = exception.GetElement(ElementNames.FieldId).GetValueAsString();
-                                var reason = exception.GetElement(ElementNames.Reason);
-                                var source = reason.GetElement(ElementNames.Source).GetValueAsString();
-                                var category = reason.GetElement(ElementNames.Category).GetValueAsString();
-                                var objSubCategory = reason.GetElement(ElementNames.SubCategory);
-                                var subcategory = (objSubCategory != null ? objSubCategory.ToString() : string.Empty);
-                                var errorCode = reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32();
-                                var desc = reason.GetElement(ElementNames.Description).GetValueAsString();
-
-                                RaiseEvent(OnFieldSubscriptionStatus, new FieldSubscriptionStatusEventArgs(
-                                    m.TopicName,
-                                    fieldId,
-                                    status,
-                                    source,
-                                    category,
-                                    subcategory,
-                                    errorCode,
-                                    desc));
-                            }
-                        }
-                    }
-                }
             }
         }
 
