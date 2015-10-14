@@ -1,26 +1,26 @@
 ﻿using Bloomberglp.Blpapi;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
+using JetBlack.Bloomberg.Messages;
 
 namespace JetBlack.Bloomberg
 {
     public class BloombergWrapper
     {
-        public event DataReceivedEventHandler OnDataReceived;
-        public event HistoricalDataReceivedEventHandler OnHistoricalDataReceived;
-        public event IntradayBarReceivedEventHandler OnIntradayBarReceived;
-        public event IntradayTickDataReceivedEventHandler OnIntradayTickDataReceived;
-        public event NotifyErrorResponseEventHandler OnNotifyErrorResponse;
-        public event SessionStatusEventHandler OnSessionStatus;
-        public event ServiceStatusEventHandler OnServiceStatus;
-        public event AdminStatusEventHandler OnAdminStatus;
-        public event SubscriptionStatusEventHandler OnSubscriptionStatus;
-        public event FieldSubscriptionStatusEventHandler OnFieldSubscriptionStatus;
-        public event ResponseStatusEventHandler OnResponseStatus;
-        public event AuthenticationEventHandler OnAuthenticationStatus;
-        public event AuthenticationErrorEventHandler OnAuthorisationError;
+        public event EventHandler<DataReceivedEventArgs> OnDataReceived;
+        public event EventHandler<HistoricalDataReceivedEventArgs> OnHistoricalDataReceived;
+        public event EventHandler<IntradayBarReceivedEventArgs> OnIntradayBarReceived;
+        public event EventHandler<IntradayTickDataReceivedEventArgs> OnIntradayTickDataReceived;
+        public event EventHandler<ErrorResponseEventArgs> OnNotifyErrorResponse;
+        public event EventHandler<SessionStatusEventArgs> OnSessionStatus;
+        public event EventHandler<ServiceStatusEventArgs> OnServiceStatus;
+        public event EventHandler<AdminStatusEventArgs> OnAdminStatus;
+        public event EventHandler<SubscriptionStatusEventArgs> OnSubscriptionStatus;
+        public event EventHandler<FieldSubscriptionStatusEventArgs> OnFieldSubscriptionStatus;
+        public event EventHandler<ResponseStatusEventArgs> OnResponseStatus;
+        public event EventHandler<AuthenticationStatusEventArgs> OnAuthenticationStatus;
+        public event EventHandler<AuthorisationErrorEventArgs> OnAuthorisationError;
 
         private readonly Session _session;
         private Service _mktDataService, _refDataService;
@@ -119,7 +119,7 @@ namespace JetBlack.Bloomberg
         {
             if (_authenticator.AuthenticationState != AuthenticationState.Succeeded)
             {
-                NotifyAuthenticationResponse(false);
+                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
                 return new Dictionary<string, CorrelationID>();
             }
 
@@ -137,10 +137,6 @@ namespace JetBlack.Bloomberg
                     {
                         subscriptions.Add(ticker, new Subscription(ticker, fields, correlationId));
                         realtimeRequestIds.Add(ticker, correlationId);
-                    }
-                    else
-                    {
-                        Trace.TraceInformation("Duplicate ticker requested: {0}", ticker);
                     }
                 }
                 _session.Subscribe(new List<Subscription>(subscriptions.Values));
@@ -206,7 +202,7 @@ namespace JetBlack.Bloomberg
         {
             if (_authenticator.AuthenticationState != AuthenticationState.Succeeded)
             {
-                NotifyAuthenticationResponse(false);
+                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
                 return;
             }
 
@@ -257,10 +253,6 @@ namespace JetBlack.Bloomberg
                     case Event.EventType.ADMIN:
                         ProcessAdminMessage(e);
                         break;
-
-                    default:
-                        Trace.TraceWarning("Unhandled event type {0}", e.Type);
-                        break;
                 }
             }
             catch (Exception ex)
@@ -272,11 +264,11 @@ namespace JetBlack.Bloomberg
         private void ProcessAuthorisationMessage(Message message)
         {
             if (message.MessageType.Equals(ElementNames.AuthorizationFailure))
-                OnAuthenticationStatus(false);
+                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
             else if (message.MessageType.Equals(ElementNames.AuthorizationSuccess))
-                OnAuthenticationStatus(true);
+                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(true));
             else
-                OnAuthenticationStatus(false);
+                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
         }
 
         private void ProcessAdminMessage(Event e)
@@ -288,13 +280,10 @@ namespace JetBlack.Bloomberg
                 switch (message.MessageType.ToString())
                 {
                     case "SlowConsumerWarning":
-                        NotifyAdminStatus(AdminStatus.SlowConsumerWarning);
+                        RaiseEvent(OnAdminStatus, new AdminStatusEventArgs(AdminStatus.SlowConsumerWarning));
                         break;
                     case "SlowConsumerWarningCleared":
-                        NotifyAdminStatus(AdminStatus.SlowConsumerWarningCleared);
-                        break;
-                    default:
-                        Trace.TraceWarning("unknown message type {0}", message.MessageType);
+                        RaiseEvent(OnAdminStatus, new AdminStatusEventArgs(AdminStatus.SlowConsumerWarningCleared));
                         break;
                 }
             }
@@ -360,8 +349,14 @@ namespace JetBlack.Bloomberg
         private bool AssertResponseError(Message m, string name)
         {
             if (!m.HasElement(ElementNames.ResponseError)) return false;
-            OnNotifyErrorResponse(name, m.MessageType.ToString(), string.Format("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError)));
+            RaiseEvent(OnNotifyErrorResponse, new ErrorResponseEventArgs(name, m.MessageType.ToString(), string.Format("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError))));
             return true;
+        }
+
+        private void RaiseEvent<T>(EventHandler<T> handler, T args) where T:EventArgs
+        {
+            if (handler != null)
+                handler(this, args);
         }
 
         private static Element ExtractEidElement(Element parent)
@@ -403,9 +398,9 @@ namespace JetBlack.Bloomberg
             {
                 _intradayBarCache.Remove(message.CorrelationID);
                 if (_authenticator.Permits(eidDataElement, message.Service))
-                    NotifyIntradayBarReceived(ticker, intradayBars, ExtractEids(eidDataElement));
+                    RaiseEvent(OnIntradayBarReceived, new IntradayBarReceivedEventArgs(ticker, intradayBars, ExtractEids(eidDataElement)));
                 else
-                    NotifyAuthenticationError(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement));
+                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement)));
             }
         }
 
@@ -443,9 +438,9 @@ namespace JetBlack.Bloomberg
             {
                 _intradayTickDataCache.Remove(m.CorrelationID);
                 if (_authenticator.Permits(eidDataElement, m.Service))
-                    NotifyIntradayTickDataReceived(ticker, intradayTickData, ExtractEids(eidDataElement));
+                    RaiseEvent(OnIntradayTickDataReceived, new IntradayTickDataReceivedEventArgs(ticker, intradayTickData, ExtractEids(eidDataElement)));
                 else
-                    NotifyAuthenticationError(ticker, m.MessageType.ToString(), ExtractEids(eidDataElement));
+                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, m.MessageType.ToString(), ExtractEids(eidDataElement)));
             }
         }
 
@@ -453,7 +448,6 @@ namespace JetBlack.Bloomberg
         {
             if (message.HasElement(ElementNames.ResponseError))
             {
-                Trace.TraceInformation("RESPONSE_ERROR: {0}", message.GetElement(ElementNames.ResponseError));
                 return;
             }
 
@@ -467,14 +461,14 @@ namespace JetBlack.Bloomberg
                 if (securityDataArray.HasElement("securityError"))
                 {
                     var securityError = securityDataArray.GetElement("securityError");
-                    NotifyResponseStatus(
+                    RaiseEvent(OnResponseStatus, new ResponseStatusEventArgs(
                         ticker,
                         ResponseStatus.InvalidSecurity,
                         securityError.GetElement(ElementNames.Source).GetValueAsString(),
                         securityError.GetElement(ElementNames.Category).GetValueAsString(),
                         securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
                         securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Message).GetValueAsString());
+                        securityError.GetElement(ElementNames.Message).GetValueAsString()));
                     continue;
                 }
 
@@ -506,7 +500,7 @@ namespace JetBlack.Bloomberg
                     }
                 }
 
-                NotifyHistoricalDataReceived(ticker, historicalMessageWrapper);
+                RaiseEvent(OnHistoricalDataReceived, new HistoricalDataReceivedEventArgs(ticker, historicalMessageWrapper));
             }
         }
 
@@ -514,7 +508,6 @@ namespace JetBlack.Bloomberg
         {
             if (m.HasElement(ElementNames.ResponseError))
             {
-                Trace.TraceInformation("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError));
                 return;
             }
 
@@ -527,14 +520,14 @@ namespace JetBlack.Bloomberg
                 if (security.HasElement(ElementNames.SecurityError))
                 {
                     var securityError = security.GetElement(ElementNames.SecurityError);
-                    NotifyResponseStatus(
+                    RaiseEvent(OnResponseStatus, new ResponseStatusEventArgs(
                         ticker,
                         ResponseStatus.InvalidSecurity,
                         securityError.GetElement(ElementNames.Source).GetValueAsString(),
                         securityError.GetElement(ElementNames.Category).GetValueAsString(),
                         securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
                         securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Message).GetValueAsString());
+                        securityError.GetElement(ElementNames.Message).GetValueAsString()));
                     continue;
                 }
 
@@ -551,7 +544,7 @@ namespace JetBlack.Bloomberg
                         messageWrapper.Add(name, value);
                 }
 
-                NotifyDataReceived(ticker, messageWrapper);
+                RaiseEvent(OnDataReceived, new DataReceivedEventArgs(ticker, messageWrapper));
             }
         }
 
@@ -577,7 +570,7 @@ namespace JetBlack.Bloomberg
                             messageWrapper.Add(name, value);
                     }
 
-                    NotifyDataReceived(m.TopicName, messageWrapper);
+                    RaiseEvent(OnDataReceived, new DataReceivedEventArgs(m.TopicName, messageWrapper));
                 }
             }
         }
@@ -603,24 +596,17 @@ namespace JetBlack.Bloomberg
                             case "SubscriptionTerminated":
                                 status = SubscriptionStatus.Terminated;
                                 break;
-                            default:
-                                Trace.TraceWarning("unknown subscription status message: {0}", messageTypeString);
-                                break;
                         }
 
-                        if (status == SubscriptionStatus.None)
+                        if (status != SubscriptionStatus.None)
                         {
-                            Trace.TraceWarning("unknown subscription status message type: {0}", m);
-                        }
-                        else
-                        {
-                            NotifySubscriptionStatus(
+                            RaiseEvent(OnSubscriptionStatus, new SubscriptionStatusEventArgs(
                                 m.TopicName,
                                 status,
                                 reason.GetElement(ElementNames.Source).GetValueAsString(),
                                 reason.GetElement(ElementNames.Category).GetValueAsString(),
                                 reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
-                                reason.GetElement(ElementNames.Description).GetValueAsString());
+                                reason.GetElement(ElementNames.Description).GetValueAsString()));
                         }
                     }
 
@@ -637,11 +623,7 @@ namespace JetBlack.Bloomberg
                                 break;
                         }
 
-                        if (status == FieldSubscriptionStatus.None)
-                        {
-                            Trace.TraceWarning("unknown subscription status message type: {0}", m);
-                        }
-                        else
+                        if (status != FieldSubscriptionStatus.None)
                         {
                             for (var i = 0; i < exceptions.NumValues; ++i)
                             {
@@ -655,15 +637,15 @@ namespace JetBlack.Bloomberg
                                 var errorCode = reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32();
                                 var desc = reason.GetElement(ElementNames.Description).GetValueAsString();
 
-                                NotifyFieldSubscriptionStatus(
+                                RaiseEvent(OnFieldSubscriptionStatus, new FieldSubscriptionStatusEventArgs(
                                     m.TopicName,
-                                    status,
                                     fieldId,
+                                    status,
                                     source,
                                     category,
                                     subcategory,
                                     errorCode,
-                                    desc);
+                                    desc));
                             }
                         }
                     }
@@ -680,13 +662,10 @@ namespace JetBlack.Bloomberg
                     switch (m.MessageType.ToString())
                     {
                         case "ServiceOpened":
-                            NotifyServiceStatus(m.TopicName, ServiceStatus.Opened);
+                            RaiseEvent(OnServiceStatus, new ServiceStatusEventArgs(m.TopicName, ServiceStatus.Opened));
                             break;
                         case "ServiceClosed":
-                            NotifyServiceStatus(m.TopicName, ServiceStatus.Closed);
-                            break;
-                        default:
-                            Trace.TraceWarning("unhandled message type {0}", m.MessageType);
+                            RaiseEvent(OnServiceStatus, new ServiceStatusEventArgs(m.TopicName, ServiceStatus.Closed));
                             break;
                     }
                 }
@@ -702,95 +681,14 @@ namespace JetBlack.Bloomberg
                     switch (m.MessageType.ToString())
                     {
                         case "SessionStarted":
-                            NotifySessionStatus(SessionStatus.Started);
+                            RaiseEvent(OnSessionStatus, new SessionStatusEventArgs(SessionStatus.Started));
                             break;
                         case "SessionStopped":
-                            NotifySessionStatus(SessionStatus.Stopped);
-                            break;
-                        default:
-                            Trace.TraceWarning("unknown message type {0}", m.MessageType);
+                            RaiseEvent(OnSessionStatus, new SessionStatusEventArgs(SessionStatus.Stopped));
                             break;
                     }
                 }
             }
-        }
-
-        private void NotifyAuthenticationResponse(bool isSuccess)
-        {
-            if (OnAuthenticationStatus != null)
-                OnAuthenticationStatus(isSuccess);
-        }
-
-        private void NotifyErrorResponse(string name, string messageType, string responseError)
-        {
-            if (OnNotifyErrorResponse != null)
-                OnNotifyErrorResponse(name, messageType, responseError);
-        }
-
-        private void NotifyAuthenticationError(string ticker, string messageType, IEnumerable<int> eids)
-        {
-            if (OnAuthorisationError != null)
-                OnAuthorisationError(ticker, messageType, eids);
-        }
-
-        private void NotifyIntradayTickDataReceived(string name, IList<IntradayTickData> intradayTickDataList, IList<int> entitlementIds)
-        {
-            if (OnIntradayTickDataReceived != null)
-                OnIntradayTickDataReceived(name, intradayTickDataList, entitlementIds);
-        }
-
-        private void NotifyIntradayBarReceived(string name, IList<IntradayBar> message, IEnumerable<int> eids)
-        {
-            if (OnIntradayBarReceived != null)
-                OnIntradayBarReceived(name, message, eids);
-        }
-
-        private void NotifyHistoricalDataReceived(string name, IDictionary<DateTime, IDictionary<string, object>> message)
-        {
-            if (OnHistoricalDataReceived != null)
-                OnHistoricalDataReceived(name, message);
-        }
-
-        private void NotifyDataReceived(string name, IDictionary<string, object> message)
-        {
-            if (OnDataReceived != null)
-                OnDataReceived(name, message);
-        }
-
-        private void NotifySessionStatus(SessionStatus status)
-        {
-            if (OnSessionStatus != null)
-                OnSessionStatus(status);
-        }
-
-        private void NotifyServiceStatus(string name, ServiceStatus status)
-        {
-            if (OnServiceStatus != null)
-                OnServiceStatus(name, status);
-        }
-
-        private void NotifyAdminStatus(AdminStatus status)
-        {
-            if (OnAdminStatus != null)
-                OnAdminStatus(status);
-        }
-
-        private void NotifySubscriptionStatus(string name, SubscriptionStatus status, string source, string category, int errorCode, string description)
-        {
-            if (OnSubscriptionStatus != null)
-                OnSubscriptionStatus(name, status, source, category, errorCode, description);
-        }
-
-        private void NotifyFieldSubscriptionStatus(string name, FieldSubscriptionStatus status, string fieldId, string source, string category, string subCategory, int errorCode, string description)
-        {
-            if (OnFieldSubscriptionStatus != null)
-                OnFieldSubscriptionStatus(name, fieldId, status, source, category, subCategory, errorCode, description);
-        }
-
-        private void NotifyResponseStatus(string name, ResponseStatus status, string source, string category, int code, string subCategory, string message)
-        {
-            if (OnResponseStatus != null)
-                OnResponseStatus(name, status, source, category, code, subCategory, message);
         }
 
         #endregion

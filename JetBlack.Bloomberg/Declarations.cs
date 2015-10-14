@@ -101,18 +101,4 @@ namespace JetBlack.Bloomberg
         Failed,
         Pending
     }
-
-    public delegate void NotifyErrorResponseEventHandler(string name, string messageType, string responseError);
-    public delegate void IntradayBarReceivedEventHandler(string name, IList<IntradayBar> intradayTickDataList, IEnumerable<int> eids);
-    public delegate void IntradayTickDataReceivedEventHandler(string name, IList<IntradayTickData> intradayBarList, IList<int> entitlementIds);
-    public delegate void HistoricalDataReceivedEventHandler(string name, IDictionary<DateTime, IDictionary<string, object>> historicalDataMessage);
-    public delegate void DataReceivedEventHandler(string name, IDictionary<string, object> referenceDataMessage);
-    public delegate void SessionStatusEventHandler(SessionStatus sessionStatus);
-    public delegate void ServiceStatusEventHandler(string name, ServiceStatus serviceStatus);
-    public delegate void AdminStatusEventHandler(AdminStatus adminStatus);
-    public delegate void ResponseStatusEventHandler(string name, ResponseStatus responseStatus, string source, string category, int code, string subCategory, string message);
-    public delegate void SubscriptionStatusEventHandler(string name, SubscriptionStatus subscriptionStatus, string source, string category, int errorCode, string description);
-    public delegate void FieldSubscriptionStatusEventHandler(string name, string fieldId, FieldSubscriptionStatus fieldSubscriptionStatus, string source, string category, string subCategory, int errorCode, string description);
-    public delegate void AuthenticationEventHandler(bool isSuccess);
-    public delegate void AuthenticationErrorEventHandler(string ticker, string messageType, IEnumerable<int> eids);
 }

@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>JetBlack.Bloomberg</RootNamespace>
     <AssemblyName>JetBlack.Bloomberg</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,8 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Bloomberglp.Blpapi">
-      <HintPath>..\..\..\SVN\Binaries\bloomberg.api\3.4.8.1\Bloomberglp.Blpapi.dll</HintPath>
+    <Reference Include="Bloomberglp.Blpapi, Version=3.4.8.1, Culture=neutral, PublicKeyToken=ec3efa8c033c2bc5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\lib\Bloomberglp.Blpapi.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,11 +55,31 @@
     <Compile Include="IntradayBarRequester.cs" />
     <Compile Include="IntradayTickData.cs" />
     <Compile Include="IntradayTickRequester.cs" />
+    <Compile Include="Messages\AdminStatusEventArgs.cs" />
+    <Compile Include="Messages\AuthorisationErrorEventArgs.cs" />
+    <Compile Include="Messages\AuthenticationStatusEventArgs.cs" />
+    <Compile Include="Messages\DataReceivedEventArgs.cs" />
+    <Compile Include="Messages\FieldSubscriptionStatusEventArgs.cs" />
+    <Compile Include="Messages\HistoricalDataReceivedEventArgs.cs" />
+    <Compile Include="Messages\IntradayBarReceivedEventArgs.cs" />
+    <Compile Include="Messages\IntradayTickDataReceivedEventArgs.cs" />
+    <Compile Include="Messages\ErrorResponseEventArgs.cs" />
+    <Compile Include="Messages\ResponseStatusEventArgs.cs" />
+    <Compile Include="Messages\ServiceStatusEventArgs.cs" />
+    <Compile Include="Messages\SessionStatusEventArgs.cs" />
+    <Compile Include="Messages\SubscriptionStatusEventArgs.cs" />
     <Compile Include="PassingAuthenticator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReferenceDataRequester.cs" />
     <Compile Include="Requester.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JetBlack.Diagnostics\JetBlack.Diagnostics.csproj">
+      <Project>{be18c61f-ccd7-4fbc-a8cc-4559d87ce54c}</Project>
+      <Name>JetBlack.Diagnostics</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

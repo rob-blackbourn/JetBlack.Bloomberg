@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using JetBlack.Bloomberg.Messages;
 
 namespace JetBlack.Bloomberg
 {
@@ -26,9 +27,9 @@ namespace JetBlack.Bloomberg
             wrapper.OnAuthenticationStatus += OnAuthenticationStatus;
         }
 
-        private void OnAuthenticationStatus(bool isSuccess)
+        private void OnAuthenticationStatus(object sender, AuthenticationStatusEventArgs args)
         {
-            _authenticationState = isSuccess ? AuthenticationState.Succeeded : AuthenticationState.Failed;
+            _authenticationState = args.IsSuccess ? AuthenticationState.Succeeded : AuthenticationState.Failed;
             _autoResetEvent.Set();
         }
 
