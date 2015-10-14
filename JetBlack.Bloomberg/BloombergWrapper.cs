@@ -1,7 +1,10 @@
-﻿using Bloomberglp.Blpapi;
+﻿using System.Net;
+using System.Net.Sockets;
+using Bloomberglp.Blpapi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBlack.Bloomberg.Authenticators;
 using JetBlack.Bloomberg.Messages;
 
 namespace JetBlack.Bloomberg
@@ -34,12 +37,7 @@ namespace JetBlack.Bloomberg
 
         private int _lastCorrelationId;
 
-        public BloombergWrapper()
-            : this(null, 0)
-        {
-        }
-
-        public BloombergWrapper(string serverHostname, int serverPort)
+        public BloombergWrapper(string serverHostname, int serverPort, string uuid, AuthenticationMethod authenticationMethod)
         {
             var sessionOptions = new SessionOptions();
 
@@ -55,19 +53,24 @@ namespace JetBlack.Bloomberg
             }
 
             _session = new Session(sessionOptions, HandleMessage);
+            var identity = _session.CreateIdentity();
 
-            if (serverHostname == null)
+            switch (authenticationMethod)
             {
-                _authenticator = new PassingAuthenticator();
+                case AuthenticationMethod.Sapi:
+                    var ipEntry = Dns.GetHostEntry(String.Empty);
+                    var ipAddresses = ipEntry.AddressList;
+                    var ipAddress = ipAddresses.First(addr => addr.AddressFamily == AddressFamily.InterNetwork);
+                    _authenticator = new SapiAuthenticator(identity, ipAddress, uuid);
+                    break;
+                case AuthenticationMethod.Bpipe:
+                    _authenticator = new BpipeAuthenticator(identity, _tokenManager);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("authenticationMethod");
             }
-            else
-            {
-#if NO_AUTHENTICATION
-                authenticator = new PassingAuthenticator();
-#else
-                _authenticator = new Authenticator(this);
-#endif
-            }
+
+            _authenticator = new BpipeAuthenticator(_session.CreateIdentity(), _tokenManager);
 
             _lastCorrelationId = 0;
         }
@@ -134,12 +137,6 @@ namespace JetBlack.Bloomberg
 
         public Dictionary<string, CorrelationID> Subscribe(IEnumerable<string> tickers, IList<string> fields)
         {
-            if (_authenticator.AuthenticationState != AuthenticationState.Succeeded)
-            {
-                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
-                return new Dictionary<string, CorrelationID>();
-            }
-
             lock (_session)
             {
                 var subscriptions = new Dictionary<string, Subscription>();
@@ -217,12 +214,6 @@ namespace JetBlack.Bloomberg
 
         public void Request(Requester requester)
         {
-            if (_authenticator.AuthenticationState != AuthenticationState.Succeeded)
-            {
-                RaiseEvent(OnAuthenticationStatus, new AuthenticationStatusEventArgs(false));
-                return;
-            }
-
             var requests = requester.CreateRequests(_refDataService);
 
             lock (_session)
@@ -248,7 +239,7 @@ namespace JetBlack.Bloomberg
                 {
                     case Event.EventType.PARTIAL_RESPONSE:
                     case Event.EventType.RESPONSE:
-                        ProcessResponse(eventArgs, eventArgs.Type == Event.EventType.PARTIAL_RESPONSE);
+                        ProcessResponse(session, eventArgs, eventArgs.Type == Event.EventType.PARTIAL_RESPONSE);
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
@@ -315,26 +306,27 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private void ProcessResponse(Event e, bool isPartialResponse)
+        private void ProcessResponse(Session session, Event eventArgs, bool isPartialResponse)
         {
-            if (!e.IsValid)
+            if (!eventArgs.IsValid)
             {
                 // TODO: What should we do here?
                 return;
             }
 
-            foreach (var m in e.GetMessages())
+            foreach (var message in eventArgs.GetMessages())
             {
-                if (m.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || m.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
-                    ProcessAuthorisationMessage(m);
-                if (m.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    ProcessIntradayBarResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    ProcessIntradayTickResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
-                    ProcessHistoricalDataResponse(m, isPartialResponse);
-                else if (m.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    ProcessReferenceDataResponse(m, isPartialResponse);
+                if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
+                    _authenticator.Process(session, message, OnFailure);
+                    ProcessAuthorisationMessage(message);
+                if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
+                    ProcessIntradayBarResponse(message, isPartialResponse);
+                else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
+                    ProcessIntradayTickResponse(message, isPartialResponse);
+                else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
+                    ProcessHistoricalDataResponse(message, isPartialResponse);
+                else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
+                    ProcessReferenceDataResponse(message, isPartialResponse);
             }
         }
 
