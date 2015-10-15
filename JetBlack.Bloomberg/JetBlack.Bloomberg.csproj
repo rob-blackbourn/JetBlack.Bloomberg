@@ -97,7 +97,7 @@
     <Compile Include="Messages\SubscriptionFailureEventArgs.cs" />
     <Compile Include="Messages\SubscriptionStatusEventArgs.cs" />
     <Compile Include="Models\TokenGenerationFailure.cs" />
-    <Compile Include="Models\TokenGenerationSuccess.cs" />
+    <Compile Include="Models\TokenData.cs" />
     <Compile Include="MessageTypeNames.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReferenceDataManager.cs" />

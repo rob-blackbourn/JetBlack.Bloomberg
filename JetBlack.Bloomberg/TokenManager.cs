@@ -8,7 +8,7 @@ namespace JetBlack.Bloomberg
 {
     public class TokenManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenData>, SessionDecorator<TokenGenerationFailure>>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenData>, SessionDecorator<TokenGenerationFailure>>>();
 
         public string GenerateToken(Session session)
         {
@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg
             throw new Exception("Token service failure.");
         }
 
-        public void GenerateToken(Session session, Action<SessionDecorator<TokenGenerationSuccess>> onSuccess, Action<SessionDecorator<TokenGenerationFailure>> onFailure)
+        public void RequestToken(Session session, Action<SessionDecorator<TokenData>> onSuccess, Action<SessionDecorator<TokenGenerationFailure>> onFailure)
         {
             var correlationId = new CorrelationID();
             _tokenRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
@@ -35,7 +35,7 @@ namespace JetBlack.Bloomberg
 
         public void ProcessTokenStatusEvent(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>> asyncPattern;
+            AsyncPattern<SessionDecorator<TokenData>, SessionDecorator<TokenGenerationFailure>> asyncPattern;
             if (!_tokenRequestHandlers.TryGetValue(message.CorrelationID, out asyncPattern))
                 onFailure(session, message, new Exception("Failed to find correlation id: " + message.CorrelationID));
             else
@@ -48,7 +48,7 @@ namespace JetBlack.Bloomberg
                     asyncPattern.OnFailure(new SessionDecorator<TokenGenerationFailure>(session, reason.ToTokenGenerationFailureEventArgs()));
                 }
                 else if (MessageTypeNames.TokenGenerationSuccess.Equals(message.MessageType))
-                    asyncPattern.OnSuccess(new SessionDecorator<TokenGenerationSuccess>(session, new TokenGenerationSuccess(message.GetElementAsString(ElementNames.Token))));
+                    asyncPattern.OnSuccess(new SessionDecorator<TokenData>(session, new TokenData(message.GetElementAsString(ElementNames.Token))));
                 else
                     onFailure(session, message, new Exception("Unknown message type: " + message.MessageType));
             }

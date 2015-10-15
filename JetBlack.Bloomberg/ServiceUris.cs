@@ -2,8 +2,8 @@
 {
     public static class ServiceUris
     {
-        public const string AuthenticationServiceUri = "//blp/apiauth";
-        public const string ReferenceDataServiceUri = "//blp/refdata";
-        public const string MarketDataServiceUri = "//blp/mktdata";
+        public const string AuthenticationService = "//blp/apiauth";
+        public const string ReferenceDataService = "//blp/refdata";
+        public const string MarketDataService = "//blp/mktdata";
     }
 }

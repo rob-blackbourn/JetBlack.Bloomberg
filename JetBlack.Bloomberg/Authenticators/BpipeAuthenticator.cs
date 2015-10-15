@@ -17,7 +17,7 @@ namespace JetBlack.Bloomberg.Authenticators
 
         public override void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure)
         {
-            _tokenManager.GenerateToken(
+            _tokenManager.RequestToken(
                 session,
                 tokenSuccessArgs =>
                 {

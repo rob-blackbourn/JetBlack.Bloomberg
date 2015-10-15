@@ -1,8 +1,8 @@
 ﻿namespace JetBlack.Bloomberg.Models
 {
-    public class TokenGenerationSuccess
+    public class TokenData
     {
-        public TokenGenerationSuccess(string token)
+        public TokenData(string token)
         {
             Token = token;
         }

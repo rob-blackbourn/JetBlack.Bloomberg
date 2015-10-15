@@ -10,5 +10,10 @@ namespace JetBlack.Bloomberg.Messages
         }
 
         public bool IsSuccess { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("IsSuccess={0}", IsSuccess);
+        }
     }
 }

@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace JetBlack.Bloomberg
+﻿namespace JetBlack.Bloomberg
 {
     public enum SessionStatus
     {
         Started,
-        Stopped
+        Terminated,
+        StartupFailure,
+        ConnectionUp,
+        ConnectionDown
     }
 
     public enum ServiceStatus
