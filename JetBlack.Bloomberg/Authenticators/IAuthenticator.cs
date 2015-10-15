@@ -1,7 +1,6 @@
 ﻿using System;
 using Bloomberglp.Blpapi;
-using JetBlack.Bloomberg.Messages;
-using JetBlack.Bloomberg.Models;
+using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg.Authenticators
 {
@@ -9,7 +8,7 @@ namespace JetBlack.Bloomberg.Authenticators
     {
         bool IsHandler(CorrelationID correlationId);
         void Process(Session session, Message message, Action<Session, Message, Exception> onFailure);
-        void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure);
+        IPromise<bool> Request(Session session, Service service);
         bool Authenticate(Session session, Service service);
         bool Permits(Element eidData, Service service);
     }

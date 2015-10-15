@@ -1,9 +1,7 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using Bloomberglp.Blpapi;
-using JetBlack.Bloomberg.Messages;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
+using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg.Authenticators
 {
@@ -19,13 +17,16 @@ namespace JetBlack.Bloomberg.Authenticators
             _uuid = uuid;
         }
 
-        public override void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure)
+        public override IPromise<bool> Request(Session session, Service service)
         {
-            var correlationId = new CorrelationID();
-            AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
+            return new Promise<bool>((resolve, reject) =>
+            {
+                var correlationId = new CorrelationID();
+                AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(resolve, reject));
 
-            var request = CreateRequest(service, _clientIpAddress, _uuid);
-            SendAuthorizationRequest(session, request, correlationId);
+                var request = CreateRequest(service, _clientIpAddress, _uuid);
+                SendAuthorizationRequest(session, request, correlationId);
+            });
         }
 
         public override bool Authenticate(Session session, Service service)

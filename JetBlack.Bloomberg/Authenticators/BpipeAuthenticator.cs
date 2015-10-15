@@ -1,8 +1,6 @@
-﻿using System;
-using Bloomberglp.Blpapi;
-using JetBlack.Bloomberg.Messages;
-using JetBlack.Bloomberg.Models;
+﻿using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Patterns;
+using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg.Authenticators
 {
@@ -16,19 +14,21 @@ namespace JetBlack.Bloomberg.Authenticators
             _tokenManager = tokenManager;
         }
 
-        public override void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure)
+        public override IPromise<bool> Request(Session session, Service service)
         {
-            _tokenManager.RequestToken(
-                session,
-                tokenSuccessArgs =>
-                {
-                    var correlationId = new CorrelationID();
-                    AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
+            return _tokenManager.Request(session).Then(token => Request(session, service, token));
+        }
 
-                    var request = CreateRequest(service, tokenSuccessArgs.Content.Token);
-                    SendAuthorizationRequest(session, request, correlationId);
-                },
-                tokenFailureArgs => onFailure(new SessionDecorator<AuthorizationFailureEventArgs>(session, new AuthorizationFailureEventArgs())));
+        private IPromise<bool> Request(Session session, Service service, string token)
+        {
+            return new Promise<bool>((resolve, reject) =>
+            {
+                var correlationId = new CorrelationID();
+                AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(resolve, reject));
+
+                var request = CreateRequest(service, token);
+                SendAuthorizationRequest(session, request, correlationId);
+            });
         }
 
         public override bool Authenticate(Session session, Service service)

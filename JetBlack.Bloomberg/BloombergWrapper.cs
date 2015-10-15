@@ -1,11 +1,14 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using Bloomberglp.Blpapi;
 using System;
 using System.Collections.Generic;
 using JetBlack.Bloomberg.Authenticators;
+using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
+using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg
 {
@@ -54,35 +57,21 @@ namespace JetBlack.Bloomberg
         public void AuthenticateAsync(IAuthenticator authenticator)
         {
             Authenticator = authenticator;
-            OpenService(ServiceUris.AuthenticationService,
-                args => Authenticator.RequestAuthentication(
-                    args.Session,
-                    args.EventArgs.Service,
-                    _ =>
-                    {
-                        RaiseEvent(AuthenticationStatus, new AuthenticationStatusEventArgs(true));
 
-                        OpenService(
-                            ServiceUris.ReferenceDataService,
-                            eventArgs =>
-                            {
-                                _refDataService = eventArgs.EventArgs.Service;
-                                Debug.Print("Opened reference data service");
-                            },
-                            eventArgs => Debug.Print("Failed to open reference data service"));
-
-                        OpenService(
-                            ServiceUris.MarketDataService,
-                            eventArgs =>
-                            {
-                                _mktDataService = eventArgs.EventArgs.Service;
-                                Debug.Print("Opened market data service");
-                            },
-                            eventArgs => Debug.Print("Failed to open market data service"));
-                    },
-                    __ => RaiseEvent(AuthenticationStatus, new AuthenticationStatusEventArgs(false))),
-                _ => RaiseEvent(AuthenticationStatus, new AuthenticationStatusEventArgs(false)));
+            _serviceManager.Request(Session, ServiceUris.AuthenticationService)
+                .Then(service => Authenticator.Request(Session, service))
+                .Then(isAuthenticated =>
+                {
+                    RaiseEvent(AuthenticationStatus, new AuthenticationStatusEventArgs(isAuthenticated));
+                    return isAuthenticated ? Promise.Resolved() : Promise.Rejected(new ApplicationException("Authentication failed"));
+                })
+                .ThenAll(() => new[]
+                {
+                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService).Then(service => Promise.Resolved(() => _refDataService = service)),
+                    _serviceManager.Request(Session, ServiceUris.MarketDataService).Then(service => Promise.Resolved(() => _mktDataService = service))
+                });
         }
+
 
         public void Stop()
         {
@@ -99,9 +88,9 @@ namespace JetBlack.Bloomberg
             return TokenManager.GenerateToken(Session);
         }
 
-        public void GenerateToken(Action<SessionDecorator<TokenData>> onSuccess, Action<SessionDecorator<TokenGenerationFailure>> onFailure)
+        public IPromise<string> RequestToken()
         {
-            TokenManager.RequestToken(Session, onSuccess, onFailure);
+            return TokenManager.Request(Session);
         }
 
         public Service OpenService(string uri)
@@ -109,9 +98,9 @@ namespace JetBlack.Bloomberg
             return _serviceManager.Open(Session, uri);
         }
 
-        public void OpenService(string uri, Action<SessionEventArgs<ServiceOpenedEventArgs>> onSuccess, Action<SessionEventArgs<ServiceOpenFailureEventArgs>> onFailure)
+        public IPromise<Service> RequestService(string uri)
         {
-            _serviceManager.Open(Session, uri, onSuccess, onFailure);
+            return _serviceManager.Request(Session, uri);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
@@ -197,7 +186,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        eventArgs.GetMessages().ForEach(message => _serviceManager.ProcessServiceStatusEvent(session, message, OnFailure));
+                        eventArgs.GetMessages().ForEach(message => _serviceManager.Process(session, message, OnFailure));
                         break;
 
                     case Event.EventType.ADMIN:
