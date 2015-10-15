@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
 
 namespace JetBlack.Bloomberg
 {
     public class IntraDayTickManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntraDayTickData, TickerResponseError>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntraDayTickData, TickerResponseError>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayTickData, TickerResponseError>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayTickData, TickerResponseError>>();
 
-        public void Request(Session session, Service refDataService, IntradayTickRequester requester, Action<TickerIntraDayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        public void Request(Session session, Service refDataService, IntradayTickRequester requester, Action<TickerIntradayTickData> onSuccess, Action<TickerResponseError> onFailure)
         {
             var requests = requester.CreateRequests(refDataService);
 
@@ -24,7 +25,7 @@ namespace JetBlack.Bloomberg
 
         public void ProcessIntradayTickResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<TickerIntraDayTickData, TickerResponseError> asyncHandler;
+            AsyncPattern<TickerIntradayTickData, TickerResponseError> asyncHandler;
             if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
@@ -62,7 +63,7 @@ namespace JetBlack.Bloomberg
                         eids));
             }
 
-            asyncHandler.OnSuccess(new TickerIntraDayTickData(ticker, data));
+            asyncHandler.OnSuccess(new TickerIntradayTickData(ticker, data));
         }
 
         private static IList<int> ExtractEids(Element eidDataElement)

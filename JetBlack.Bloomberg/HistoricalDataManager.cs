@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
 
 namespace JetBlack.Bloomberg

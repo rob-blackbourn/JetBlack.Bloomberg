@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg
 {

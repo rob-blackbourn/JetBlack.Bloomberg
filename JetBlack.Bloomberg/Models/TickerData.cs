@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace JetBlack.Bloomberg.Messages
+namespace JetBlack.Bloomberg.Models
 {
     public class TickerData
     {

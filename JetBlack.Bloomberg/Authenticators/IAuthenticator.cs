@@ -1,6 +1,7 @@
 ﻿using System;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg.Authenticators
 {

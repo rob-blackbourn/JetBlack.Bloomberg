@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JetBlack.Bloomberg.Authenticators;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
 
 namespace JetBlack.Bloomberg
@@ -116,7 +117,7 @@ namespace JetBlack.Bloomberg
             return _subscriptionManager.ToObservable(_session, tickers, fields);
         }
 
-        public void RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime, Action<TickerIntraDayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        public void RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime, Action<TickerIntradayTickData> onSuccess, Action<TickerResponseError> onFailure)
         {
             RequestIntradayTick(
                 new IntradayTickRequester
@@ -128,7 +129,7 @@ namespace JetBlack.Bloomberg
                 }, onSuccess, onFailure);
         }
 
-        public void RequestIntradayTick(IntradayTickRequester request, Action<TickerIntraDayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        public void RequestIntradayTick(IntradayTickRequester request, Action<TickerIntradayTickData> onSuccess, Action<TickerResponseError> onFailure)
         {
             _intraDayTickManager.Request(_session, _refDataService, request, onSuccess, onFailure);
             

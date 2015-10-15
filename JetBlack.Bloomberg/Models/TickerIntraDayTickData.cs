@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 
-namespace JetBlack.Bloomberg.Messages
+namespace JetBlack.Bloomberg.Models
 {
-    public class TickerIntraDayTickData
+    public class TickerIntradayTickData
     {
-        public TickerIntraDayTickData(string ticker, IList<IntradayTickData> intraDayTicks)
+        public TickerIntradayTickData(string ticker, IList<IntradayTickData> intraDayTicks)
         {
             Ticker = ticker;
             IntraDayTicks = intraDayTicks;

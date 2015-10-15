@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using JetBlack.Bloomberg.Messages;
 
-namespace JetBlack.Bloomberg.Messages
+namespace JetBlack.Bloomberg.Models
 {
     public class ReferenceDataResponse
     {

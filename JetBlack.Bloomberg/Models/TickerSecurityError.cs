@@ -1,4 +1,4 @@
-﻿namespace JetBlack.Bloomberg.Messages
+﻿namespace JetBlack.Bloomberg.Models
 {
     public class TickerSecurityError
     {

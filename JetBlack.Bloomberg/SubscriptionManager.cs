@@ -5,6 +5,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg
 {

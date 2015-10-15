@@ -1,6 +1,6 @@
 ﻿using Bloomberglp.Blpapi;
 
-namespace JetBlack.Bloomberg.Messages
+namespace JetBlack.Bloomberg.Models
 {
     public class SessionDecorator<T>
     {
