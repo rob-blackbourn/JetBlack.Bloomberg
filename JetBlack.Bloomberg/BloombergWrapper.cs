@@ -12,20 +12,13 @@ namespace JetBlack.Bloomberg
 {
     public class BloombergWrapper
     {
-        public event EventHandler<IntradayTickDataReceivedEventArgs> OnIntradayTickDataReceived;
-        public event EventHandler<ErrorResponseEventArgs> OnNotifyErrorResponse;
         public event EventHandler<SessionStatusEventArgs> OnSessionStatus;
         public event EventHandler<AdminStatusEventArgs> OnAdminStatus;
         public event EventHandler<AuthenticationStatusEventArgs> OnAuthenticationStatus;
-        public event EventHandler<AuthorisationErrorEventArgs> OnAuthorisationError;
 
         private readonly Session _session;
         private Service _mktDataService, _refDataService;
-        private readonly Dictionary<CorrelationID, ICollection<string>> _requestMap = new Dictionary<CorrelationID, ICollection<string>>();
         private readonly IAuthenticator _authenticator;
-
-        private readonly Dictionary<CorrelationID, IList<IntradayTickData>> _intradayTickDataCache = new Dictionary<CorrelationID, IList<IntradayTickData>>();
-        private readonly Dictionary<CorrelationID, IList<IntradayBar>> _intradayBarCache = new Dictionary<CorrelationID, IList<IntradayBar>>();
 
         private readonly TokenManager _tokenManager = new TokenManager();
         private readonly ServiceManager _serviceManager = new ServiceManager();
@@ -33,6 +26,7 @@ namespace JetBlack.Bloomberg
         private readonly ReferenceDataManager _referenceDataManager = new ReferenceDataManager();
         private readonly HistoricalDataManager _historicalDataManager = new HistoricalDataManager();
         private readonly IntradayBarManager _intradayBarManager = new IntradayBarManager();
+        private readonly IntraDayTickManager _intraDayTickManager = new IntraDayTickManager();
 
         private int _lastCorrelationId;
 
@@ -74,8 +68,6 @@ namespace JetBlack.Bloomberg
             _lastCorrelationId = 0;
         }
 
-        #region Public Methods
-
         public void Start()
         {
             lock (_session)
@@ -86,9 +78,6 @@ namespace JetBlack.Bloomberg
                 _mktDataService = OpenService("//blp/mktdata");
                 _refDataService = OpenService("//blp/refdata");
             }
-#if NO_AUTHENTICATION
-            authenticator.Authorise();
-#endif
         }
 
         public void StartAsync()
@@ -127,20 +116,23 @@ namespace JetBlack.Bloomberg
             return _subscriptionManager.ToObservable(_session, tickers, fields);
         }
 
-        #region Helper Methods
-
-        public void RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
+        public void RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime, Action<TickerIntraDayTickData> onSuccess, Action<TickerResponseError> onFailure)
         {
-            Request(
+            RequestIntradayTick(
                 new IntradayTickRequester
                 {
                     Tickers = tickers,
                     EventTypes = eventTypes,
                     StartDateTime = startDateTime,
                     EndDateTime = endDateTime
-                });
+                }, onSuccess, onFailure);
         }
 
+        public void RequestIntradayTick(IntradayTickRequester request, Action<TickerIntraDayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        {
+            _intraDayTickManager.Request(_session, _refDataService, request, onSuccess, onFailure);
+            
+        }
 
         public void RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester, Action<TickerData> onSuccess, Action<TickerSecurityError> onFailure)
         {
@@ -177,27 +169,6 @@ namespace JetBlack.Bloomberg
                 };
             _intradayBarManager.Request(_session, _refDataService, request, onSuccess, onFailure);
         }
-
-        #endregion
-
-        public void Request(Requester requester)
-        {
-            var requests = requester.CreateRequests(_refDataService);
-
-            lock (_session)
-            {
-                foreach (var request in requests)
-                {
-                    var correlationId = new CorrelationID(++_lastCorrelationId);
-                    if (requester.MapTickers) _requestMap.Add(correlationId, requester.Tickers);
-                    _session.SendRequest(request, correlationId);
-                }
-            }
-        }
-
-        #endregion
-
-        #region Private Methods
 
         private void HandleMessage(Event eventArgs, Session session)
         {
@@ -290,7 +261,7 @@ namespace JetBlack.Bloomberg
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
                     _intradayBarManager.ProcessIntradayBarResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    ProcessIntradayTickResponse(session, message, isPartialResponse);
+                    _intraDayTickManager.ProcessIntradayTickResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
                     _historicalDataManager.ProcessHistoricalDataResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
@@ -298,85 +269,10 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private string ExtractTicker(CorrelationID correlationId, bool isPartialResponse)
-        {
-            string ticker;
-            lock (_session)
-            {
-                ticker = _requestMap[correlationId].First();
-                if (!isPartialResponse)
-                    _requestMap.Remove(correlationId);
-            }
-            return ticker;
-        }
-
-        private static IList<int> ExtractEids(Element eidDataElement)
-        {
-            var eids = new List<int>();
-            for (var i = 0; i < eidDataElement.NumValues; ++i)
-            {
-                var eid = eidDataElement.GetValueAsInt32(i);
-                eids.Add(eid);
-            }
-            return eids;
-        }
-
-        private bool AssertResponseError(Message m, string name)
-        {
-            if (!m.HasElement(ElementNames.ResponseError)) return false;
-            RaiseEvent(OnNotifyErrorResponse, new ErrorResponseEventArgs(name, m.MessageType.ToString(), string.Format("RESPONSE_ERROR: {0}", m.GetElement(ElementNames.ResponseError))));
-            return true;
-        }
-
         private void RaiseEvent<T>(EventHandler<T> handler, T args) where T:EventArgs
         {
             if (handler != null)
                 handler(this, args);
-        }
-
-        private static Element ExtractEidElement(Element parent)
-        {
-            return parent.HasElement("eidData") ? parent.GetElement("eidData") : null;
-        }
-
-        private void ProcessIntradayTickResponse(Session session, Message message, bool isPartialResponse)
-        {
-            var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
-            if (AssertResponseError(message, ticker)) return;
-
-            var tickData = message.GetElement("tickData");
-            var tickDataArray = tickData.GetElement("tickData");
-            var eidDataElement = ExtractEidElement(tickData);
-            if (!_intradayTickDataCache.ContainsKey(message.CorrelationID))
-                _intradayTickDataCache.Add(message.CorrelationID, new List<IntradayTickData>());
-            var intradayTickData = _intradayTickDataCache[message.CorrelationID];
-
-            for (var i = 0; i < tickDataArray.NumValues; ++i)
-            {
-                var item = tickDataArray.GetValueAsElement(i);
-                var conditionCodes = (item.HasElement("conditionCodes") ? item.GetElementAsString("conditionCodes").Split(',') : null);
-                var exchangeCodes = (item.HasElement("exchangeCode") ? item.GetElementAsString("exchangeCode").Split(',') : null);
-
-                intradayTickData.Add(
-                    new IntradayTickData
-                    {
-                        Time = item.GetElementAsDatetime("time").ToDateTime(),
-                        EventType = (EventType)Enum.Parse(typeof(EventType), item.GetElementAsString("type"), true),
-                        Value = item.GetElementAsFloat64("value"),
-                        Size = item.GetElementAsInt32("size"),
-                        ConditionCodes = conditionCodes,
-                        ExchangeCodes = exchangeCodes
-                    });
-            }
-
-            if (!isPartialResponse)
-            {
-                _intradayTickDataCache.Remove(message.CorrelationID);
-                if (_authenticator.Permits(eidDataElement, message.Service))
-                    RaiseEvent(OnIntradayTickDataReceived, new IntradayTickDataReceivedEventArgs(ticker, intradayTickData, ExtractEids(eidDataElement)));
-                else
-                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement)));
-            }
         }
 
         private void ProcessSessionStatus(Event e)
@@ -397,7 +293,5 @@ namespace JetBlack.Bloomberg
                 }
             }
         }
-
-        #endregion
     }
 }

@@ -69,6 +69,7 @@
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="HistoricalDataManager.cs" />
     <Compile Include="IntradayBarManager.cs" />
+    <Compile Include="IntraDayTickManager.cs" />
     <Compile Include="Messages\HistoricalTickerData.cs" />
     <Compile Include="Messages\ReferenceDataResponse.cs" />
     <Compile Include="Messages\ResponseError.cs" />
@@ -76,12 +77,13 @@
     <Compile Include="Messages\SessionDecorator.cs" />
     <Compile Include="Messages\TickerData.cs" />
     <Compile Include="Messages\TickerIntradayBarData.cs" />
+    <Compile Include="Messages\TickerIntraDayTickData.cs" />
     <Compile Include="Messages\TickerResponseError.cs" />
     <Compile Include="Messages\TickerSecurityError.cs" />
     <Compile Include="Requesters\HistoricalDataRequester.cs" />
     <Compile Include="Messages\IntradayBar.cs" />
     <Compile Include="Requesters\IntradayBarRequester.cs" />
-    <Compile Include="IntradayTickData.cs" />
+    <Compile Include="Messages\IntradayTickData.cs" />
     <Compile Include="Requesters\IntradayTickRequester.cs" />
     <Compile Include="Messages\AdminStatusEventArgs.cs" />
     <Compile Include="Messages\AuthorisationErrorEventArgs.cs" />
