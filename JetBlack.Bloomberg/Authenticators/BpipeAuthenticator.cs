@@ -2,6 +2,7 @@
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
+using JetBlack.Bloomberg.Patterns;
 
 namespace JetBlack.Bloomberg.Authenticators
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Patterns
 {
     public static class AsyncPattern
     {

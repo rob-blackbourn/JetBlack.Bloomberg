@@ -57,7 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AsyncPattern.cs" />
+    <Compile Include="Patterns\AsyncPattern.cs" />
     <Compile Include="Authenticators\AuthenticationMethod.cs" />
     <Compile Include="Authenticators\Authenticator.cs" />
     <Compile Include="Authenticators\BpipeAuthenticator.cs" />
