@@ -129,6 +129,28 @@ namespace JetBlack.Bloomberg
                 reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
                 reason.GetElement(ElementNames.Description).GetValueAsString());
         }
+
+        public static SecurityError ToSecurityError(this Element securityError)
+        {
+            return
+                new SecurityError(
+                    securityError.GetElementAsString(ElementNames.Source), 
+                    securityError.GetElementAsString(ElementNames.Category),
+                    securityError.GetElementAsString(ElementNames.SubCategory),
+                    securityError.GetElementAsInt32(ElementNames.Code),
+                    securityError.GetElementAsString(ElementNames.Message));
+        }
+
+        public static ResponseError ToResponseError(this Element response)
+        {
+            return
+                new ResponseError(
+                    response.GetElementAsString(ElementNames.Source),
+                    response.GetElementAsString(ElementNames.Category),
+                    response.GetElementAsString(ElementNames.SubCategory),
+                    response.GetElementAsInt32(ElementNames.Code),
+                    response.GetElementAsString(ElementNames.Message));
+        }
     }
 
     public static class KeyValuePair

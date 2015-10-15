@@ -12,13 +12,10 @@ namespace JetBlack.Bloomberg
 {
     public class BloombergWrapper
     {
-        public event EventHandler<HistoricalDataReceivedEventArgs> OnHistoricalDataReceived;
-        public event EventHandler<IntradayBarReceivedEventArgs> OnIntradayBarReceived;
         public event EventHandler<IntradayTickDataReceivedEventArgs> OnIntradayTickDataReceived;
         public event EventHandler<ErrorResponseEventArgs> OnNotifyErrorResponse;
         public event EventHandler<SessionStatusEventArgs> OnSessionStatus;
         public event EventHandler<AdminStatusEventArgs> OnAdminStatus;
-        public event EventHandler<ResponseStatusEventArgs> OnResponseStatus;
         public event EventHandler<AuthenticationStatusEventArgs> OnAuthenticationStatus;
         public event EventHandler<AuthorisationErrorEventArgs> OnAuthorisationError;
 
@@ -34,6 +31,8 @@ namespace JetBlack.Bloomberg
         private readonly ServiceManager _serviceManager = new ServiceManager();
         private readonly SubscriptionManager _subscriptionManager = new SubscriptionManager();
         private readonly ReferenceDataManager _referenceDataManager = new ReferenceDataManager();
+        private readonly HistoricalDataManager _historicalDataManager = new HistoricalDataManager();
+        private readonly IntradayBarManager _intradayBarManager = new IntradayBarManager();
 
         private int _lastCorrelationId;
 
@@ -143,30 +142,31 @@ namespace JetBlack.Bloomberg
         }
 
 
-        public void RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester, Action<SessionEventArgs<DataReceivedEventArgs>> onSuccess, Action<SessionEventArgs<ErrorResponseEventArgs>> onFailure)
+        public void RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester, Action<TickerData> onSuccess, Action<TickerSecurityError> onFailure)
         {
             _referenceDataManager.Request(_session, _refDataService, requester, onSuccess, onFailure);
         }
 
-        public void RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
+        public void RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection, Action<HistoricalTickerData> onSuccess, Action<TickerSecurityError> onFailure)
         {
-            Request(
-                new HistoricalDataRequester
-                {
-                    Tickers = tickers,
-                    Fields = fields,
-                    StartDate = startDate,
-                    EndDate = endDate,
-                    PeriodicitySelection = periodicitySelection,
-                    PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
-                    NonTradingDayFillOption = NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
-                    NonTradingDayFillMethod = NonTradingDayFillMethod.NIL_VALUE,
-                });
+            var requester = new HistoricalDataRequester
+            {
+                Tickers = tickers,
+                Fields = fields,
+                StartDate = startDate,
+                EndDate = endDate,
+                PeriodicitySelection = periodicitySelection,
+                PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
+                NonTradingDayFillOption = NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
+                NonTradingDayFillMethod = NonTradingDayFillMethod.NIL_VALUE,
+            };
+
+            _historicalDataManager.Request(_session, _refDataService, requester, onSuccess, onFailure);
         }
 
-        public void RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
+        public void RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval, Action<TickerIntradayBarData> onSuccess, Action<TickerResponseError> onFailure)
         {
-            Request(
+            var request =
                 new IntradayBarRequester
                 {
                     Tickers = tickers,
@@ -174,8 +174,10 @@ namespace JetBlack.Bloomberg
                     EndDateTime = endDateTime,
                     EventType = eventType,
                     Interval = interval
-                });
+                };
+            _intradayBarManager.Request(_session, _refDataService, request, onSuccess, onFailure);
         }
+
         #endregion
 
         public void Request(Requester requester)
@@ -286,13 +288,13 @@ namespace JetBlack.Bloomberg
                     _authenticator.Process(session, message, OnFailure);
                     ProcessAuthorisationMessage(message);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    ProcessIntradayBarResponse(session, message, isPartialResponse);
+                    _intradayBarManager.ProcessIntradayBarResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
                     ProcessIntradayTickResponse(session, message, isPartialResponse);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
-                    ProcessHistoricalDataResponse(message, isPartialResponse);
+                    _historicalDataManager.ProcessHistoricalDataResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    _referenceDataManager.ProcessReferenceDataResponse(session, message, isPartialResponse);
+                    _referenceDataManager.ProcessReferenceDataResponse(session, message, isPartialResponse, OnFailure);
             }
         }
 
@@ -337,46 +339,6 @@ namespace JetBlack.Bloomberg
             return parent.HasElement("eidData") ? parent.GetElement("eidData") : null;
         }
 
-        private void ProcessIntradayBarResponse(Session session, Message message, bool isPartialResponse)
-        {
-            var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
-            if (AssertResponseError(message, ticker)) return;
-
-            var barData = message.GetElement("barData");
-            var barTickData = barData.GetElement("barTickData");
-
-            if (!_intradayBarCache.ContainsKey(message.CorrelationID))
-                _intradayBarCache.Add(message.CorrelationID, new List<IntradayBar>());
-            var intradayBars = _intradayBarCache[message.CorrelationID];
-
-            var eidDataElement = ExtractEidElement(barData);
-
-            for (var i = 0; i < barTickData.NumValues; ++i)
-            {
-                var element = barTickData.GetValueAsElement(i);
-                intradayBars.Add(
-                    new IntradayBar
-                    {
-                        Time = element.GetElementAsDatetime("time").ToDateTime(),
-                        Open = element.GetElementAsFloat64("open"),
-                        High = element.GetElementAsFloat64("high"),
-                        Low = element.GetElementAsFloat64("low"),
-                        Close = element.GetElementAsFloat64("close"),
-                        NumEvents = element.GetElementAsInt32("numEvents"),
-                        Volume = element.GetElementAsInt64("volume")
-                    });
-            }
-
-            if (!isPartialResponse)
-            {
-                _intradayBarCache.Remove(message.CorrelationID);
-                if (_authenticator.Permits(eidDataElement, message.Service))
-                    RaiseEvent(OnIntradayBarReceived, new IntradayBarReceivedEventArgs(ticker, intradayBars, ExtractEids(eidDataElement)));
-                else
-                    RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement)));
-            }
-        }
-
         private void ProcessIntradayTickResponse(Session session, Message message, bool isPartialResponse)
         {
             var ticker = ExtractTicker(message.CorrelationID, isPartialResponse);
@@ -414,66 +376,6 @@ namespace JetBlack.Bloomberg
                     RaiseEvent(OnIntradayTickDataReceived, new IntradayTickDataReceivedEventArgs(ticker, intradayTickData, ExtractEids(eidDataElement)));
                 else
                     RaiseEvent(OnAuthorisationError, new AuthorisationErrorEventArgs(ticker, message.MessageType.ToString(), ExtractEids(eidDataElement)));
-            }
-        }
-
-        private void ProcessHistoricalDataResponse(Session session, Message message, bool isPartialResponse)
-        {
-            if (message.HasElement(ElementNames.ResponseError))
-            {
-                return;
-            }
-
-            var securityDataArray = message.GetElement(ElementNames.SecurityData);
-
-            for (var i = 0; i < securityDataArray.NumValues; ++i)
-            {
-                var securityData = securityDataArray.GetElement(i);
-                var ticker = securityData.GetValueAsString();
-
-                if (securityDataArray.HasElement("securityError"))
-                {
-                    var securityError = securityDataArray.GetElement("securityError");
-                    RaiseEvent(OnResponseStatus, new ResponseStatusEventArgs(
-                        ticker,
-                        ResponseStatus.InvalidSecurity,
-                        securityError.GetElement(ElementNames.Source).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Category).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Code).GetValueAsInt32(),
-                        securityError.GetElement(ElementNames.SubCategory).GetValueAsString(),
-                        securityError.GetElement(ElementNames.Message).GetValueAsString()));
-                    continue;
-                }
-
-                var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
-
-                var historicalMessageWrapper = new Dictionary<DateTime, IDictionary<string, object>>();
-
-                for (var j = 0; j < fieldDataArray.NumValues; ++j)
-                {
-                    var messageWrapper = new Dictionary<string, object>();
-                    var fieldData = fieldDataArray.GetValueAsElement(j);
-
-                    for (var k = 0; k < fieldData.NumElements; ++k)
-                    {
-                        var field = fieldData.GetElement(k);
-                        var name = field.Name.ToString();
-                        var value = field.GetFieldValue();
-                        if (messageWrapper.ContainsKey(name))
-                            messageWrapper[name] = value;
-                        else
-                            messageWrapper.Add(name, value);
-                    }
-
-                    if (messageWrapper.ContainsKey("date"))
-                    {
-                        var date = (DateTime)messageWrapper["date"];
-                        messageWrapper.Remove("date");
-                        historicalMessageWrapper.Add(date, messageWrapper);
-                    }
-                }
-
-                RaiseEvent(OnHistoricalDataReceived, new HistoricalDataReceivedEventArgs(ticker, historicalMessageWrapper));
             }
         }
 

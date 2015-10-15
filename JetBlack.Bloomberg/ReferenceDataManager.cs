@@ -8,25 +8,26 @@ namespace JetBlack.Bloomberg
 {
     public class ReferenceDataManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<SessionEventArgs<DataReceivedEventArgs>, SessionEventArgs<ErrorResponseEventArgs>>> _referenceDataObservers = new Dictionary<CorrelationID, AsyncPattern<SessionEventArgs<DataReceivedEventArgs>, SessionEventArgs<ErrorResponseEventArgs>>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<TickerData, TickerSecurityError>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerData, TickerSecurityError>>();
 
-        public void Request(Session session, Service refDataService, ReferenceDataRequester requester, Action<SessionEventArgs<DataReceivedEventArgs>> onSuccess, Action<SessionEventArgs<ErrorResponseEventArgs>> onFailure)
+        public void Request(Session session, Service refDataService, ReferenceDataRequester requester, Action<TickerData> onSuccess, Action<TickerSecurityError> onFailure)
         {
             var requests = requester.CreateRequests(refDataService);
 
             foreach (var request in requests)
             {
                 var correlationId = new CorrelationID();
-                _referenceDataObservers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
+                _asyncHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
                 session.SendRequest(request, correlationId);
             }
         }
 
-        public void ProcessReferenceDataResponse(Session session, Message message, bool isPartialResponse)
+        public void ProcessReferenceDataResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<SessionEventArgs<DataReceivedEventArgs>, SessionEventArgs<ErrorResponseEventArgs>> asyncHandler;
-            if (!_referenceDataObservers.TryGetValue(message.CorrelationID, out asyncHandler))
+            AsyncPattern<TickerData, TickerSecurityError> asyncHandler;
+            if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
+                onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
             }
 
@@ -35,18 +36,16 @@ namespace JetBlack.Bloomberg
                 return;
             }
 
-            var securityData = new List<DataReceivedEventArgs>();
-            //var securityErrors = new List<KeyValuePair<string, SecurityError>>();
-
             var securities = message.GetElement(ElementNames.SecurityData);
             for (var i = 0; i < securities.NumValues; ++i)
             {
                 var security = securities.GetValueAsElement(i);
                 var ticker = security.GetElementAsString(ElementNames.Security);
 
+
                 if (security.HasElement(ElementNames.SecurityError))
                 {
-                    //securityErrors.Add(KeyValuePair.Create(ticker, new SecurityError(security.GetElement(ElementNames.SecurityError))));
+                    asyncHandler.OnFailure(new TickerSecurityError(ticker, security.GetElement(ElementNames.SecurityError).ToSecurityError(), isPartialResponse));
                     continue;
                 }
 
@@ -63,7 +62,7 @@ namespace JetBlack.Bloomberg
                         data.Add(name, value);
                 }
 
-                asyncHandler.OnSuccess(new SessionEventArgs<DataReceivedEventArgs>(session, new DataReceivedEventArgs(ticker, data)));
+                asyncHandler.OnSuccess(new TickerData(ticker, data, isPartialResponse));
             }
         }
     }
