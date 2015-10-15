@@ -109,10 +109,10 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        public static TokenGenerationFailureEventArgs ToTokenGenerationFailureEventArgs(this Element reason)
+        public static TokenGenerationFailure ToTokenGenerationFailureEventArgs(this Element reason)
         {
             return
-                new TokenGenerationFailureEventArgs(
+                new TokenGenerationFailure(
                     reason.GetElementAsString(ElementNames.Source),
                     reason.GetElementAsInt32(ElementNames.ErrorCode),
                     reason.GetElementAsString(ElementNames.Category),

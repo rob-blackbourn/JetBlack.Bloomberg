@@ -7,7 +7,7 @@ namespace JetBlack.Bloomberg
 {
     public class TokenManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<SessionEventArgs<TokenGenerationSuccessEventArgs>, SessionEventArgs<TokenGenerationFailureEventArgs>>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionEventArgs<TokenGenerationSuccessEventArgs>, SessionEventArgs<TokenGenerationFailureEventArgs>>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>>>();
 
         public string GenerateToken(Session session)
         {
@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg
             throw new Exception("Token service failure.");
         }
 
-        public void GenerateToken(Session session, Action<SessionEventArgs<TokenGenerationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<TokenGenerationFailureEventArgs>> onFailure)
+        public void GenerateToken(Session session, Action<SessionDecorator<TokenGenerationSuccess>> onSuccess, Action<SessionDecorator<TokenGenerationFailure>> onFailure)
         {
             var correlationId = new CorrelationID();
             _tokenRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
@@ -34,7 +34,7 @@ namespace JetBlack.Bloomberg
 
         public void ProcessTokenStatusEvent(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<SessionEventArgs<TokenGenerationSuccessEventArgs>, SessionEventArgs<TokenGenerationFailureEventArgs>> asyncPattern;
+            AsyncPattern<SessionDecorator<TokenGenerationSuccess>, SessionDecorator<TokenGenerationFailure>> asyncPattern;
             if (!_tokenRequestHandlers.TryGetValue(message.CorrelationID, out asyncPattern))
                 onFailure(session, message, new Exception("Failed to find correlation id: " + message.CorrelationID));
             else
@@ -44,10 +44,10 @@ namespace JetBlack.Bloomberg
                 if (MessageTypeNames.TokenGenerationFailure.Equals(message.MessageType))
                 {
                     var reason = message.GetElement(ElementNames.Reason);
-                    asyncPattern.OnFailure(new SessionEventArgs<TokenGenerationFailureEventArgs>(session, reason.ToTokenGenerationFailureEventArgs()));
+                    asyncPattern.OnFailure(new SessionDecorator<TokenGenerationFailure>(session, reason.ToTokenGenerationFailureEventArgs()));
                 }
                 else if (MessageTypeNames.TokenGenerationSuccess.Equals(message.MessageType))
-                    asyncPattern.OnSuccess(new SessionEventArgs<TokenGenerationSuccessEventArgs>(session, new TokenGenerationSuccessEventArgs(message.GetElementAsString(ElementNames.Token))));
+                    asyncPattern.OnSuccess(new SessionDecorator<TokenGenerationSuccess>(session, new TokenGenerationSuccess(message.GetElementAsString(ElementNames.Token))));
                 else
                     onFailure(session, message, new Exception("Unknown message type: " + message.MessageType));
             }

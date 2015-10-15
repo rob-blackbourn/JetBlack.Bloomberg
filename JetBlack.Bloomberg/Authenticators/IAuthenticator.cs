@@ -8,7 +8,7 @@ namespace JetBlack.Bloomberg.Authenticators
     {
         bool IsHandler(CorrelationID correlationId);
         void Process(Session session, Message message, Action<Session, Message, Exception> onFailure);
-        void RequestAuthentication(Session session, Service service, Action<SessionEventArgs<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<AuthorizationFailureEventArgs>> onFailure);
+        void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure);
         bool Authenticate(Session session, Service service);
         bool Permits(Element eidData, Service service);
     }

@@ -10,7 +10,6 @@ namespace JetBlack.Bloomberg.Authenticators
     {
         private readonly IPAddress _clientIpAddress;
         private readonly string _uuid;
-        private readonly IDictionary<CorrelationID, AsyncPattern<SessionEventArgs<AuthorizationSuccessEventArgs>, SessionEventArgs<AuthorizationFailureEventArgs>>> _authorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionEventArgs<AuthorizationSuccessEventArgs>, SessionEventArgs<AuthorizationFailureEventArgs>>>();
 
         public SapiAuthenticator(Identity identity, IPAddress clientIpAddress, string uuid)
             : base(identity)
@@ -19,7 +18,7 @@ namespace JetBlack.Bloomberg.Authenticators
             _uuid = uuid;
         }
 
-        public override void RequestAuthentication(Session session, Service service, Action<SessionEventArgs<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<AuthorizationFailureEventArgs>> onFailure)
+        public override void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure)
         {
             var correlationId = new CorrelationID();
             AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));

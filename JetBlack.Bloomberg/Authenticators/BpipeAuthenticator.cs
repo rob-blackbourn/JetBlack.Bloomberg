@@ -14,7 +14,7 @@ namespace JetBlack.Bloomberg.Authenticators
             _tokenManager = tokenManager;
         }
 
-        public override void RequestAuthentication(Session session, Service service, Action<SessionEventArgs<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<AuthorizationFailureEventArgs>> onFailure)
+        public override void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure)
         {
             _tokenManager.GenerateToken(
                 session,
@@ -23,10 +23,10 @@ namespace JetBlack.Bloomberg.Authenticators
                     var correlationId = new CorrelationID();
                     AuthorizationRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
 
-                    var request = CreateRequest(service, tokenSuccessArgs.EventArgs.Token);
+                    var request = CreateRequest(service, tokenSuccessArgs.Content.Token);
                     SendAuthorizationRequest(session, request, correlationId);
                 },
-                tokenFailureArgs => onFailure(new SessionEventArgs<AuthorizationFailureEventArgs>(session, new AuthorizationFailureEventArgs())));
+                tokenFailureArgs => onFailure(new SessionDecorator<AuthorizationFailureEventArgs>(session, new AuthorizationFailureEventArgs())));
         }
 
         public override bool Authenticate(Session session, Service service)

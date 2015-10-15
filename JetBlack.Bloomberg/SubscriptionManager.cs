@@ -10,11 +10,11 @@ namespace JetBlack.Bloomberg
 {
     public class SubscriptionManager
     {
-        private readonly IDictionary<CorrelationID, IObserver<SessionEventArgs<DataReceivedEventArgs>>> _subscriptions = new Dictionary<CorrelationID, IObserver<SessionEventArgs<DataReceivedEventArgs>>>();
+        private readonly IDictionary<CorrelationID, IObserver<TickerData>> _subscriptions = new Dictionary<CorrelationID, IObserver<TickerData>>();
 
-        public IObservable<SessionEventArgs<DataReceivedEventArgs>> ToObservable(Session session, IEnumerable<string> tickers, IEnumerable<string> fields)
+        public IObservable<TickerData> ToObservable(Session session, IEnumerable<string> tickers, IEnumerable<string> fields)
         {
-            return Observable.Create<SessionEventArgs<DataReceivedEventArgs>>(observer =>
+            return Observable.Create<TickerData>(observer =>
             {
                 var uniqueFields = fields.Distinct().ToArray();
                 var subscriptions = new List<Subscription>();
@@ -35,18 +35,18 @@ namespace JetBlack.Bloomberg
             });
         }
 
-        public void ProcessSubscriptionData(Session session, Message message)
+        public void ProcessSubscriptionData(Session session, Message message, bool isPartialResponse)
         {
-            IObserver<SessionEventArgs<DataReceivedEventArgs>> observer;
+            IObserver<TickerData> observer;
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 
-            observer.OnNext(new SessionEventArgs<DataReceivedEventArgs>(session, new DataReceivedEventArgs(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue()))));
+            observer.OnNext(new TickerData(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue()), isPartialResponse));
         }
 
         public void ProcessSubscriptionStatus(Session session, Message message)
         {
-            IObserver<SessionEventArgs<DataReceivedEventArgs>> observer;
+            IObserver<TickerData> observer;
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 

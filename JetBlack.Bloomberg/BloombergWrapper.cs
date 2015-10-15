@@ -96,7 +96,7 @@ namespace JetBlack.Bloomberg
             return _tokenManager.GenerateToken(_session);
         }
 
-        public void GenerateToken(Action<SessionEventArgs<TokenGenerationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<TokenGenerationFailureEventArgs>> onFailure)
+        public void GenerateToken(Action<SessionDecorator<TokenGenerationSuccess>> onSuccess, Action<SessionDecorator<TokenGenerationFailure>> onFailure)
         {
             _tokenManager.GenerateToken(_session, onSuccess, onFailure);
         }
@@ -111,7 +111,7 @@ namespace JetBlack.Bloomberg
             _serviceManager.Open(_session, uri, onSuccess, onFailure);
         }
 
-        public IObservable<SessionEventArgs<DataReceivedEventArgs>> ToObservable(IEnumerable<string> tickers, IList<string> fields)
+        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
         {
             return _subscriptionManager.ToObservable(_session, tickers, fields);
         }
@@ -182,7 +182,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message));
+                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message, false));
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:

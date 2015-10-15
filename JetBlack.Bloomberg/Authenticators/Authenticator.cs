@@ -8,7 +8,7 @@ namespace JetBlack.Bloomberg.Authenticators
     public abstract class Authenticator : IAuthenticator
     {
         private readonly Identity _identity;
-        protected readonly IDictionary<CorrelationID, AsyncPattern<SessionEventArgs<AuthorizationSuccessEventArgs>, SessionEventArgs<AuthorizationFailureEventArgs>>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionEventArgs<AuthorizationSuccessEventArgs>, SessionEventArgs<AuthorizationFailureEventArgs>>>();
+        protected readonly IDictionary<CorrelationID, AsyncPattern<SessionDecorator<AuthorizationSuccessEventArgs>, SessionDecorator<AuthorizationFailureEventArgs>>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<SessionDecorator<AuthorizationSuccessEventArgs>, SessionDecorator<AuthorizationFailureEventArgs>>>();
 
         protected Authenticator(Identity identity)
         {
@@ -49,13 +49,13 @@ namespace JetBlack.Bloomberg.Authenticators
 
         public void Process(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<SessionEventArgs<AuthorizationSuccessEventArgs>, SessionEventArgs<AuthorizationFailureEventArgs>> asyncHandler;
+            AsyncPattern<SessionDecorator<AuthorizationSuccessEventArgs>, SessionDecorator<AuthorizationFailureEventArgs>> asyncHandler;
             if (AuthorizationRequestHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 if (MessageTypeNames.AuthorizationFailure.Equals(message.MessageType))
-                    asyncHandler.OnFailure(new SessionEventArgs<AuthorizationFailureEventArgs>(session, new AuthorizationFailureEventArgs()));
+                    asyncHandler.OnFailure(new SessionDecorator<AuthorizationFailureEventArgs>(session, new AuthorizationFailureEventArgs()));
                 else if (MessageTypeNames.AuthorizationSuccess.Equals(message.MessageType))
-                    asyncHandler.OnSuccess(new SessionEventArgs<AuthorizationSuccessEventArgs>(session, new AuthorizationSuccessEventArgs()));
+                    asyncHandler.OnSuccess(new SessionDecorator<AuthorizationSuccessEventArgs>(session, new AuthorizationSuccessEventArgs()));
                 else
                     onFailure(session, message, new Exception("Unknown message type: " + message));
             }
@@ -68,7 +68,7 @@ namespace JetBlack.Bloomberg.Authenticators
             return _identity.HasEntitlements(eidData, service, missingEntitlements);
         }
 
-        public abstract void RequestAuthentication(Session session, Service service, Action<SessionEventArgs<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionEventArgs<AuthorizationFailureEventArgs>> onFailure);
+        public abstract void RequestAuthentication(Session session, Service service, Action<SessionDecorator<AuthorizationSuccessEventArgs>> onSuccess, Action<SessionDecorator<AuthorizationFailureEventArgs>> onFailure);
 
         public abstract bool Authenticate(Session session, Service service);
     }

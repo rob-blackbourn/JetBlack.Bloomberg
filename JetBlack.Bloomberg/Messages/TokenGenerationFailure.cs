@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace JetBlack.Bloomberg.Messages
+﻿namespace JetBlack.Bloomberg.Messages
 {
-    public class TokenGenerationFailureEventArgs : EventArgs
+    public class TokenGenerationFailure
     {
-        public TokenGenerationFailureEventArgs(string source, int errorCode, string category, string subCategory, string description)
+        public TokenGenerationFailure(string source, int errorCode, string category, string subCategory, string description)
         {
             Source = source;
             ErrorCode = errorCode;
