@@ -10,7 +10,7 @@ namespace JetBlack.Bloomberg
 {
     public class TokenManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<string, Exception>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<string, Exception>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<string>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<string>>();
 
         public string GenerateToken(Session session)
         {
@@ -28,26 +28,19 @@ namespace JetBlack.Bloomberg
             throw new Exception("Token service failure.");
         }
 
-        //public void RequestToken(Session session, Action<string> onSuccess, Action<Exception> onFailure)
-        //{
-        //    var correlationId = new CorrelationID();
-        //    _tokenRequestHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
-        //    session.GenerateToken(correlationId);
-        //}
-
         public IPromise<string> Request(Session session)
         {
             return new Promise<string>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                _tokenRequestHandlers.Add(correlationId, AsyncPattern.Create(resolve, reject));
+                _tokenRequestHandlers.Add(correlationId, AsyncPattern<string>.Create(resolve, reject));
                 session.GenerateToken(correlationId);
             });
         }
 
         public void ProcessTokenStatusEvent(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<string, Exception> asyncPattern;
+            AsyncPattern<string> asyncPattern;
             if (!_tokenRequestHandlers.TryGetValue(message.CorrelationID, out asyncPattern))
                 onFailure(session, message, new Exception("Failed to find correlation id: " + message.CorrelationID));
             else

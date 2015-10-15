@@ -10,7 +10,7 @@ namespace JetBlack.Bloomberg
 {
     public class ServiceManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<Service, Exception>> _openHandlers = new Dictionary<CorrelationID, AsyncPattern<Service, Exception>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<Service>> _openHandlers = new Dictionary<CorrelationID, AsyncPattern<Service>>();
 
         public Service Open(Session session, string uri)
         {
@@ -23,14 +23,14 @@ namespace JetBlack.Bloomberg
             return new Promise<Service>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                _openHandlers.Add(correlationId, AsyncPattern.Create(resolve, reject));
+                _openHandlers.Add(correlationId, AsyncPattern<Service>.Create(resolve, reject));
                 session.OpenServiceAsync(uri, correlationId);
             });
         }
 
         public void Process(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<Service, Exception> asyncHandler;
+            AsyncPattern<Service> asyncHandler;
             if (!_openHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Failed to find handler for service status event with correlation id: " + message.CorrelationID));

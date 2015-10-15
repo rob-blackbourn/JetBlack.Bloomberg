@@ -2,23 +2,20 @@
 
 namespace JetBlack.Bloomberg.Patterns
 {
-    public static class AsyncPattern
+    public class AsyncPattern<TSuccess>
     {
-        public static AsyncPattern<TSuccess, TFailure> Create<TSuccess, TFailure>(Action<TSuccess> onSuccess, Action<TFailure> onFailure)
-        {
-            return new AsyncPattern<TSuccess, TFailure>(onSuccess, onFailure);
-        }
-    }
-
-    public class AsyncPattern<TSuccess, TFailure>
-    {
-        public AsyncPattern(Action<TSuccess> onSuccess, Action<TFailure> onFailure)
+        public AsyncPattern(Action<TSuccess> onSuccess, Action<Exception> onFailure)
         {
             OnFailure = onFailure;
             OnSuccess = onSuccess;
         }
 
         public Action<TSuccess> OnSuccess { get; private set; }
-        public Action<TFailure> OnFailure { get; private set; }
+        public Action<Exception> OnFailure { get; private set; }
+
+        public static AsyncPattern<TSuccess> Create(Action<TSuccess> onSuccess, Action<Exception> onFailure)
+        {
+            return new AsyncPattern<TSuccess>(onSuccess, onFailure);
+        }
     }
 }

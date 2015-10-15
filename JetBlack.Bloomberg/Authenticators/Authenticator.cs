@@ -9,7 +9,7 @@ namespace JetBlack.Bloomberg.Authenticators
     public abstract class Authenticator : IAuthenticator
     {
         private readonly Identity _identity;
-        protected readonly IDictionary<CorrelationID, AsyncPattern<bool, Exception>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<bool, Exception>>();
+        protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
 
         protected Authenticator(Identity identity)
         {
@@ -54,7 +54,7 @@ namespace JetBlack.Bloomberg.Authenticators
 
         public void Process(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<bool, Exception> asyncHandler;
+            AsyncPattern<bool> asyncHandler;
             if (!AuthorizationRequestHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));

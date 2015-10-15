@@ -1,32 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
-using JetBlack.Bloomberg.Messages;
+using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
 using JetBlack.Bloomberg.Requesters;
+using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg
 {
     public class HistoricalDataManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<HistoricalTickerData, TickerSecurityError>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<HistoricalTickerData, TickerSecurityError>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<HistoricalTickerData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<HistoricalTickerData>>();
 
-        public void Request(Session session, Service refDataService, HistoricalDataRequester requester, Action<HistoricalTickerData> onSuccess, Action<TickerSecurityError> onFailure)
+        public IPromise<HistoricalTickerData> Request(Session session, Service refDataService, HistoricalDataRequester requester)
         {
-            var requests = requester.CreateRequests(refDataService);
-
-            foreach (var request in requests)
+            return new Promise<HistoricalTickerData>((resolve, reject) =>
             {
-                var correlationId = new CorrelationID();
-                _asyncHandlers.Add(correlationId, AsyncPattern.Create(onSuccess, onFailure));
-                session.SendRequest(request, correlationId);
-            }
+                var requests = requester.CreateRequests(refDataService);
+
+                foreach (var request in requests)
+                {
+                    var correlationId = new CorrelationID();
+                    _asyncHandlers.Add(correlationId, AsyncPattern<HistoricalTickerData>.Create(resolve, reject));
+                    session.SendRequest(request, correlationId);
+                }
+            });
         }
 
-        public void ProcessHistoricalDataResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<HistoricalTickerData, TickerSecurityError> asyncHandler;
+            AsyncPattern<HistoricalTickerData> asyncHandler;
             if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
@@ -47,7 +51,7 @@ namespace JetBlack.Bloomberg
 
                 if (securityDataArray.HasElement("securityError"))
                 {
-                    asyncHandler.OnFailure(new TickerSecurityError(ticker, securityDataArray.GetElement("securityError").ToSecurityError(), isPartialResponse));
+                    asyncHandler.OnFailure(new ContentException<TickerSecurityError>(new TickerSecurityError(ticker, securityDataArray.GetElement("securityError").ToSecurityError(), isPartialResponse)));
                     continue;
                 }
 

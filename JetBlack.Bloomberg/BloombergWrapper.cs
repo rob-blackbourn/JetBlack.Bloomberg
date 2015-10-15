@@ -1,10 +1,7 @@
-﻿using System.Diagnostics;
-using System.Text;
-using Bloomberglp.Blpapi;
+﻿using Bloomberglp.Blpapi;
 using System;
 using System.Collections.Generic;
 using JetBlack.Bloomberg.Authenticators;
-using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
@@ -19,7 +16,8 @@ namespace JetBlack.Bloomberg
         public event EventHandler<AuthenticationStatusEventArgs> AuthenticationStatus;
 
         public Session Session { get; private set; }
-        private Service _mktDataService, _refDataService;
+        public Service MarketDataService { get; private set; }
+        public Service ReferenceDataService { get; private set; }
 
         public TokenManager TokenManager { get; private set; }
         private readonly ServiceManager _serviceManager = new ServiceManager();
@@ -44,8 +42,8 @@ namespace JetBlack.Bloomberg
                 if (!Session.Start())
                     throw new Exception("Failed to start session");
 
-                _mktDataService = OpenService("//blp/mktdata");
-                _refDataService = OpenService("//blp/refdata");
+                MarketDataService = OpenService("//blp/mktdata");
+                ReferenceDataService = OpenService("//blp/refdata");
             }
         }
 
@@ -67,8 +65,8 @@ namespace JetBlack.Bloomberg
                 })
                 .ThenAll(() => new[]
                 {
-                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService).Then(service => Promise.Resolved(() => _refDataService = service)),
-                    _serviceManager.Request(Session, ServiceUris.MarketDataService).Then(service => Promise.Resolved(() => _mktDataService = service))
+                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService).Then(service => Promise.Resolved(() => ReferenceDataService = service)),
+                    _serviceManager.Request(Session, ServiceUris.MarketDataService).Then(service => Promise.Resolved(() => MarketDataService = service))
                 });
         }
 
@@ -108,49 +106,53 @@ namespace JetBlack.Bloomberg
             return _subscriptionManager.ToObservable(Session, tickers, fields);
         }
 
-        public void RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime, Action<TickerIntradayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        public IPromise<TickerIntradayTickData> RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
         {
-            RequestIntradayTick(
+            return RequestIntradayTick(
                 new IntradayTickRequester
                 {
                     Tickers = tickers,
                     EventTypes = eventTypes,
                     StartDateTime = startDateTime,
                     EndDateTime = endDateTime
-                }, onSuccess, onFailure);
+                });
         }
 
-        public void RequestIntradayTick(IntradayTickRequester request, Action<TickerIntradayTickData> onSuccess, Action<TickerResponseError> onFailure)
+        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequester request)
         {
-            _intraDayTickManager.Request(Session, _refDataService, request, onSuccess, onFailure);
+            return _intraDayTickManager.Request(Session, ReferenceDataService, request);
             
         }
 
-        public void RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester, Action<TickerData> onSuccess, Action<TickerSecurityError> onFailure)
+        public IPromise<TickerData> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester)
         {
-            _referenceDataManager.Request(Session, _refDataService, requester, onSuccess, onFailure);
+            return _referenceDataManager.Request(Session, ReferenceDataService, requester);
         }
 
-        public void RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection, Action<HistoricalTickerData> onSuccess, Action<TickerSecurityError> onFailure)
+        public IPromise<HistoricalTickerData> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
         {
-            var requester = new HistoricalDataRequester
-            {
-                Tickers = tickers,
-                Fields = fields,
-                StartDate = startDate,
-                EndDate = endDate,
-                PeriodicitySelection = periodicitySelection,
-                PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
-                NonTradingDayFillOption = NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
-                NonTradingDayFillMethod = NonTradingDayFillMethod.NIL_VALUE,
-            };
-
-            _historicalDataManager.Request(Session, _refDataService, requester, onSuccess, onFailure);
+            return RequestHistoricalData(
+                new HistoricalDataRequester
+                {
+                    Tickers = tickers,
+                    Fields = fields,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    PeriodicitySelection = periodicitySelection,
+                    PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
+                    NonTradingDayFillOption = NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
+                    NonTradingDayFillMethod = NonTradingDayFillMethod.NIL_VALUE,
+                });
         }
 
-        public void RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval, Action<TickerIntradayBarData> onSuccess, Action<TickerResponseError> onFailure)
+        public IPromise<HistoricalTickerData> RequestHistoricalData(HistoricalDataRequester requester)
         {
-            var request =
+            return _historicalDataManager.Request(Session, ReferenceDataService, requester);
+        }
+
+        public IPromise<TickerIntradayBarData> RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
+        {
+            return RequestIntradayBar(
                 new IntradayBarRequester
                 {
                     Tickers = tickers,
@@ -158,8 +160,12 @@ namespace JetBlack.Bloomberg
                     EndDateTime = endDateTime,
                     EventType = eventType,
                     Interval = interval
-                };
-            _intradayBarManager.Request(Session, _refDataService, request, onSuccess, onFailure);
+                });
+        }
+
+        public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequester requester)
+        {
+            return _intradayBarManager.Request(Session, ReferenceDataService, requester);
         }
 
         private void HandleMessage(Event eventArgs, Session session)
@@ -240,13 +246,13 @@ namespace JetBlack.Bloomberg
                 if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
                     Authenticator.Process(session, message, OnFailure);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    _intradayBarManager.ProcessIntradayBarResponse(session, message, isPartialResponse, OnFailure);
+                    _intradayBarManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    _intraDayTickManager.ProcessIntradayTickResponse(session, message, isPartialResponse, OnFailure);
+                    _intraDayTickManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
-                    _historicalDataManager.ProcessHistoricalDataResponse(session, message, isPartialResponse, OnFailure);
+                    _historicalDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    _referenceDataManager.ProcessReferenceDataResponse(session, message, isPartialResponse, OnFailure);
+                    _referenceDataManager.Process(session, message, isPartialResponse, OnFailure);
             }
         }
 
