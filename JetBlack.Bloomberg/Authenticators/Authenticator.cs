@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Patterns;
-using JetBlack.Promises;
+using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Authenticators
 {

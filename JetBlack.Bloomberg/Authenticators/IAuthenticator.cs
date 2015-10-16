@@ -1,6 +1,6 @@
 ﻿using System;
 using Bloomberglp.Blpapi;
-using JetBlack.Promises;
+using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Authenticators
 {

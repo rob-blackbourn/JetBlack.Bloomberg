@@ -4,7 +4,7 @@ using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
-using JetBlack.Promises;
+using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
