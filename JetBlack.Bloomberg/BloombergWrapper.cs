@@ -65,11 +65,20 @@ namespace JetBlack.Bloomberg
                 })
                 .ThenAll(() => new[]
                 {
-                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService).Then(service => Promise.Resolved(() => ReferenceDataService = service)),
-                    _serviceManager.Request(Session, ServiceUris.MarketDataService).Then(service => Promise.Resolved(() => MarketDataService = service))
+                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService)
+                        .Then(service =>
+                        {
+                            ReferenceDataService = service;
+                            return Promise.Resolved();
+                        }),
+                    _serviceManager.Request(Session, ServiceUris.MarketDataService)
+                        .Then(service =>
+                        {
+                            MarketDataService = service;
+                            return Promise.Resolved();
+                        })
                 });
         }
-
 
         public void Stop()
         {
