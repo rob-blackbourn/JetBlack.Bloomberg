@@ -12,6 +12,7 @@ namespace JetBlack.Bloomberg
     public class IntraDayTickManager
     {
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>>();
+        private readonly IDictionary<CorrelationID, TickerIntradayTickData> _partial = new Dictionary<CorrelationID, TickerIntradayTickData>();
 
         public IPromise<TickerIntradayTickData> Request(Session session, Service refDataService, IntradayTickRequester requester)
         {
@@ -47,9 +48,15 @@ namespace JetBlack.Bloomberg
 
             var tickData = message.GetElement("tickData");
             var tickDataArray = tickData.GetElement("tickData");
-            var entitlementIds = tickData.HasElement("eidData") ? tickData.GetElement("eidData").ExtractEids() : null;
 
-            var data = new List<IntradayTickData>();
+            TickerIntradayTickData tickerIntradayTickData;
+            if (_partial.TryGetValue(message.CorrelationID, out tickerIntradayTickData))
+                _partial.Remove(message.CorrelationID);
+            else
+            {
+                var entitlementIds = tickData.HasElement("eidData") ? tickData.GetElement("eidData").ExtractEids() : null;
+                tickerIntradayTickData = new TickerIntradayTickData(ticker, new List<IntradayTickData>(), entitlementIds);
+            }
 
             for (var i = 0; i < tickDataArray.NumValues; ++i)
             {
@@ -57,7 +64,7 @@ namespace JetBlack.Bloomberg
                 var conditionCodes = (item.HasElement("conditionCodes") ? item.GetElementAsString("conditionCodes").Split(',') : null);
                 var exchangeCodes = (item.HasElement("exchangeCode") ? item.GetElementAsString("exchangeCode").Split(',') : null);
 
-                data.Add(
+                tickerIntradayTickData.IntraDayTicks.Add(
                     new IntradayTickData(
                         item.GetElementAsDatetime("time").ToDateTime(),
                         (EventType)Enum.Parse(typeof(EventType), item.GetElementAsString("type"), true),
@@ -67,7 +74,10 @@ namespace JetBlack.Bloomberg
                         exchangeCodes));
             }
 
-            asyncHandler.OnSuccess(new TickerIntradayTickData(ticker, data, entitlementIds));
+            if (isPartialResponse)
+                _partial[message.CorrelationID] = tickerIntradayTickData;
+            else
+                asyncHandler.OnSuccess(tickerIntradayTickData);
         }
     }
 }
