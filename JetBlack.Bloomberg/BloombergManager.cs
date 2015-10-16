@@ -11,40 +11,49 @@ namespace JetBlack.Bloomberg
 {
     public class BloombergManager
     {
-        public event EventHandler<SessionStatusEventArgs> SessionStatus;
-        public event EventHandler<AdminStatusEventArgs> AdminStatus;
-        public event EventHandler<AuthenticationStatusEventArgs> AuthenticationStatus;
+        private readonly Func<BloombergManager, IAuthenticator> _authenticatorFactory;
+        public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
+        public event EventHandler<EventArgs<AdminStatus>> AdminStatus;
+        public event EventHandler<EventArgs<bool>> AuthenticationStatus;
+        public event EventHandler<EventArgs<bool>> InitialisationStatus;
 
         public Session Session { get; private set; }
+        public Identity Identity { get; private set; }
+        public Service AuthorisationService { get; private set; }
         public Service MarketDataService { get; private set; }
         public Service ReferenceDataService { get; private set; }
 
         public TokenManager TokenManager { get; private set; }
-        private readonly ServiceManager _serviceManager = new ServiceManager();
-        private readonly SubscriptionManager _subscriptionManager = new SubscriptionManager();
-        private readonly ReferenceDataManager _referenceDataManager = new ReferenceDataManager();
-        private readonly HistoricalDataManager _historicalDataManager = new HistoricalDataManager();
-        private readonly IntradayBarManager _intradayBarManager = new IntradayBarManager();
-        private readonly IntraDayTickManager _intraDayTickManager = new IntraDayTickManager();
+        public ServiceManager ServiceManager { get; private set; }
+        public SubscriptionManager SubscriptionManager { get; private set; }
+        public ReferenceDataManager ReferenceDataManager { get; private set; }
+        public HistoricalDataManager HistoricalDataManager { get; private set; }
+        public IntradayBarManager IntradayBarManager { get; private set; }
+        public IntraDayTickManager IntraDayTickManager { get; private set; }
 
         public IAuthenticator Authenticator { get; private set; }
 
-        public BloombergManager(SessionOptions sessionOptions)
+        public BloombergManager(SessionOptions sessionOptions, Func<BloombergManager, IAuthenticator> authenticatorFactory)
         {
-            TokenManager = new TokenManager();
+            _authenticatorFactory = authenticatorFactory;
             Session = new Session(sessionOptions, HandleMessage);
+
+            TokenManager = new TokenManager();
+            ServiceManager = new ServiceManager();
+            SubscriptionManager = new SubscriptionManager();
+            ReferenceDataManager = new ReferenceDataManager();
+            HistoricalDataManager = new HistoricalDataManager();
+            IntradayBarManager = new IntradayBarManager();
+            IntraDayTickManager = new IntraDayTickManager();
         }
 
         public void Start()
         {
-            lock (Session)
-            {
-                if (!Session.Start())
-                    throw new Exception("Failed to start session");
+            if (!Session.Start())
+                throw new Exception("Failed to start session");
 
-                MarketDataService = OpenService("//blp/mktdata");
-                ReferenceDataService = OpenService("//blp/refdata");
-            }
+            MarketDataService = OpenService("//blp/mktdata");
+            ReferenceDataService = OpenService("//blp/refdata");
         }
 
         public void StartAsync()
@@ -52,31 +61,42 @@ namespace JetBlack.Bloomberg
             Session.StartAsync();
         }
 
-        public void AuthenticateAsync(IAuthenticator authenticator)
+        public void AuthenticateAsync()
         {
-            Authenticator = authenticator;
+            Identity = Session.CreateIdentity();
+            Authenticator = _authenticatorFactory(this);
 
-            _serviceManager.Request(Session, ServiceUris.AuthenticationService)
-                .Then(service => Authenticator.Request(Session, service))
+            ServiceManager.Request(Session, ServiceUris.AuthenticationService)
+                .Then(service =>
+                {
+                    AuthorisationService = service;
+                    return Authenticator.Request(Session, service);
+                })
                 .Then(isAuthenticated =>
                 {
-                    RaiseEvent(AuthenticationStatus, new AuthenticationStatusEventArgs(isAuthenticated));
+                    RaiseEvent(AuthenticationStatus, new EventArgs<bool>(isAuthenticated));
                     return isAuthenticated ? Promise.Resolved() : Promise.Rejected(new ApplicationException("Authentication failed"));
                 })
                 .ThenAll(() => new[]
                 {
-                    _serviceManager.Request(Session, ServiceUris.ReferenceDataService)
+                    ServiceManager.Request(Session, ServiceUris.ReferenceDataService)
                         .Then(service =>
                         {
                             ReferenceDataService = service;
                             return Promise.Resolved();
                         }),
-                    _serviceManager.Request(Session, ServiceUris.MarketDataService)
+                    ServiceManager.Request(Session, ServiceUris.MarketDataService)
                         .Then(service =>
                         {
                             MarketDataService = service;
                             return Promise.Resolved();
                         })
+                }).Done(() =>
+                {
+                    RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
+                }, _ =>
+                {
+                    RaiseEvent(InitialisationStatus, new EventArgs<bool>(false));
                 });
         }
 
@@ -102,17 +122,17 @@ namespace JetBlack.Bloomberg
 
         public Service OpenService(string uri)
         {
-            return _serviceManager.Open(Session, uri);
+            return ServiceManager.Open(Session, uri);
         }
 
         public IPromise<Service> RequestService(string uri)
         {
-            return _serviceManager.Request(Session, uri);
+            return ServiceManager.Request(Session, uri);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
         {
-            return _subscriptionManager.ToObservable(Session, tickers, fields);
+            return SubscriptionManager.ToObservable(Session, Identity, tickers, fields);
         }
 
         public IPromise<TickerIntradayTickData> RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
@@ -129,13 +149,13 @@ namespace JetBlack.Bloomberg
 
         public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequestFactory request)
         {
-            return _intraDayTickManager.Request(Session, ReferenceDataService, request);
+            return IntraDayTickManager.Request(Session, Identity, ReferenceDataService, request);
             
         }
 
-        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequestFactory requestFactory)
+        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(ReferenceDataRequestFactory requestFactory)
         {
-            return _referenceDataManager.Request(Session, ReferenceDataService, requestFactory);
+            return ReferenceDataManager.Request(Session, Identity, ReferenceDataService, requestFactory);
         }
 
         public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
@@ -156,7 +176,7 @@ namespace JetBlack.Bloomberg
 
         public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequestFactory requestFactory)
         {
-            return _historicalDataManager.Request(Session, ReferenceDataService, requestFactory);
+            return HistoricalDataManager.Request(Session, Identity, ReferenceDataService, requestFactory);
         }
 
         public IPromise<TickerIntradayBarData> RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
@@ -174,7 +194,7 @@ namespace JetBlack.Bloomberg
 
         public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequestFactory requestFactory)
         {
-            return _intradayBarManager.Request(Session, ReferenceDataService, requestFactory);
+            return IntradayBarManager.Request(Session, Identity, ReferenceDataService, requestFactory);
         }
 
         private void HandleMessage(Event eventArgs, Session session)
@@ -189,11 +209,11 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message, false));
+                        eventArgs.ForEach(message => SubscriptionManager.ProcessSubscriptionData(session, message, false));
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:
-                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionStatus(session, message));
+                        eventArgs.ForEach(message => SubscriptionManager.ProcessSubscriptionStatus(session, message));
                         break;
 
                     case Event.EventType.SESSION_STATUS:
@@ -201,7 +221,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        eventArgs.GetMessages().ForEach(message => _serviceManager.Process(session, message, OnFailure));
+                        eventArgs.GetMessages().ForEach(message => ServiceManager.Process(session, message, OnFailure));
                         break;
 
                     case Event.EventType.ADMIN:
@@ -233,10 +253,10 @@ namespace JetBlack.Bloomberg
                 switch (message.MessageType.ToString())
                 {
                     case "SlowConsumerWarning":
-                        RaiseEvent(AdminStatus, new AdminStatusEventArgs(Bloomberg.AdminStatus.SlowConsumerWarning));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Bloomberg.AdminStatus.SlowConsumerWarning));
                         break;
                     case "SlowConsumerWarningCleared":
-                        RaiseEvent(AdminStatus, new AdminStatusEventArgs(Bloomberg.AdminStatus.SlowConsumerWarningCleared));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Bloomberg.AdminStatus.SlowConsumerWarningCleared));
                         break;
                 }
             }
@@ -255,13 +275,13 @@ namespace JetBlack.Bloomberg
                 if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
                     Authenticator.Process(session, message, OnFailure);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    _intradayBarManager.Process(session, message, isPartialResponse, OnFailure);
+                    IntradayBarManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    _intraDayTickManager.Process(session, message, isPartialResponse, OnFailure);
+                    IntraDayTickManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
-                    _historicalDataManager.Process(session, message, isPartialResponse, OnFailure);
+                    HistoricalDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    _referenceDataManager.Process(session, message, isPartialResponse, OnFailure);
+                    ReferenceDataManager.Process(session, message, isPartialResponse, OnFailure);
             }
         }
 
@@ -274,15 +294,15 @@ namespace JetBlack.Bloomberg
         private void ProcessSessionStatus(Message message)
         {
             if (MessageTypeNames.SessionStarted.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new SessionStatusEventArgs(Bloomberg.SessionStatus.Started));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.Started));
             if (MessageTypeNames.SessionTerminated.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new SessionStatusEventArgs(Bloomberg.SessionStatus.Terminated));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.Terminated));
             if (MessageTypeNames.SessionStartupFailure.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new SessionStatusEventArgs(Bloomberg.SessionStatus.StartupFailure));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.StartupFailure));
             if (MessageTypeNames.SessionConnectionUp.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new SessionStatusEventArgs(Bloomberg.SessionStatus.ConnectionUp));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.ConnectionUp));
             if (MessageTypeNames.SessionConnectionDown.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new SessionStatusEventArgs(Bloomberg.SessionStatus.ConnectionDown));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.ConnectionDown));
         }
     }
 }

@@ -14,7 +14,7 @@ namespace JetBlack.Bloomberg
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>>();
         private readonly IDictionary<CorrelationID, TickerIntradayBarData> _partial = new Dictionary<CorrelationID, TickerIntradayBarData>();
 
-        public IPromise<TickerIntradayBarData> Request(Session session, Service refDataService, IntradayBarRequestFactory requestFactory)
+        public IPromise<TickerIntradayBarData> Request(Session session, Identity identity, Service refDataService, IntradayBarRequestFactory requestFactory)
         {
             return new Promise<TickerIntradayBarData>((resolve, reject) =>
             {
@@ -24,7 +24,7 @@ namespace JetBlack.Bloomberg
                 {
                     var correlationId = new CorrelationID();
                     _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayBarData>.Create(resolve, reject));
-                    session.SendRequest(request, correlationId);
+                    session.SendRequest(request, identity, correlationId);
                 }
             });
         }

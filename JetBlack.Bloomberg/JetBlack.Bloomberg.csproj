@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\ContentException.cs" />
+    <Compile Include="Messages\EventArgs.cs" />
     <Compile Include="OperationNames.cs" />
     <Compile Include="Patterns\AsyncPattern.cs" />
     <Compile Include="Authenticators\AuthenticationMethod.cs" />

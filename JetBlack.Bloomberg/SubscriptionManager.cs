@@ -13,7 +13,7 @@ namespace JetBlack.Bloomberg
     {
         private readonly IDictionary<CorrelationID, IObserver<TickerData>> _subscriptions = new Dictionary<CorrelationID, IObserver<TickerData>>();
 
-        public IObservable<TickerData> ToObservable(Session session, IEnumerable<string> tickers, IEnumerable<string> fields)
+        public IObservable<TickerData> ToObservable(Session session, Identity identity, IEnumerable<string> tickers, IEnumerable<string> fields)
         {
             return Observable.Create<TickerData>(observer =>
             {
@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg
 
                     subscriptions.Add(new Subscription(ticker, uniqueFields, correlationId));
                 }
-                session.Subscribe(subscriptions);
+                session.Subscribe(subscriptions, identity);
 
                 return Disposable.Create(() =>
                 {
