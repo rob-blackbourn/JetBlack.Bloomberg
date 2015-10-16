@@ -64,7 +64,7 @@
     <Compile Include="Authenticators\BpipeAuthenticator.cs" />
     <Compile Include="Authenticators\IAuthenticator.cs" />
     <Compile Include="Authenticators\SapiAuthenticator.cs" />
-    <Compile Include="BloombergWrapper.cs" />
+    <Compile Include="BloombergManager.cs" />
     <Compile Include="Declarations.cs" />
     <Compile Include="ElementNames.cs" />
     <Compile Include="ExtensionMethods.cs" />

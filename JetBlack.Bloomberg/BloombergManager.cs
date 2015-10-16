@@ -9,7 +9,7 @@ using JetBlack.Promises;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergWrapper
+    public class BloombergManager
     {
         public event EventHandler<SessionStatusEventArgs> SessionStatus;
         public event EventHandler<AdminStatusEventArgs> AdminStatus;
@@ -29,7 +29,7 @@ namespace JetBlack.Bloomberg
 
         public IAuthenticator Authenticator { get; private set; }
 
-        public BloombergWrapper(SessionOptions sessionOptions)
+        public BloombergManager(SessionOptions sessionOptions)
         {
             TokenManager = new TokenManager();
             Session = new Session(sessionOptions, HandleMessage);
