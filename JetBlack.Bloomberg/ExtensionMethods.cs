@@ -110,6 +110,22 @@ namespace JetBlack.Bloomberg
             }
         }
 
+        public static IList<int> ExtractEids(this Element eidDataElement)
+        {
+            var eids = new List<int>();
+
+            if (eidDataElement != null)
+            {
+                for (var i = 0; i < eidDataElement.NumValues; ++i)
+                {
+                    var eid = eidDataElement.GetValueAsInt32(i);
+                    eids.Add(eid);
+                }
+            }
+
+            return eids;
+        }
+
         public static TokenGenerationFailure ToTokenGenerationFailureEventArgs(this Element reason)
         {
             return

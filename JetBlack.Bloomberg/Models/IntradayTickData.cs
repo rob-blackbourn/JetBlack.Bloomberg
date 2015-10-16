@@ -5,9 +5,8 @@ namespace JetBlack.Bloomberg.Models
 {
     public class IntradayTickData
     {
-        public IntradayTickData(DateTime time, EventType eventType, double value, int size, IList<string> conditionCodes, IList<string> exchangeCodes, IList<int> eidData)
+        public IntradayTickData(DateTime time, EventType eventType, double value, int size, IList<string> conditionCodes, IList<string> exchangeCodes)
         {
-            EidData = eidData;
             ExchangeCodes = exchangeCodes;
             ConditionCodes = conditionCodes;
             Size = size;
@@ -22,7 +21,6 @@ namespace JetBlack.Bloomberg.Models
         public int Size { get; private set; }
         public IList<string> ConditionCodes { get; private set; }
         public IList<string> ExchangeCodes { get; private set; }
-        public IList<int> EidData { get; private set; }
 
         public override string ToString()
         {

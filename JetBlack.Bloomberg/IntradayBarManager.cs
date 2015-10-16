@@ -47,8 +47,7 @@ namespace JetBlack.Bloomberg
 
             var barData = message.GetElement("barData");
             var barTickData = barData.GetElement("barTickData");
-
-            var eidDataElement = barData.HasElement("eidData") ? barData.GetElement("eidData") : null;
+            var entitlementIds = barData.HasElement("eidData") ? barData.GetElement("eidData").ExtractEids() : null;
 
             var data = new List<IntradayBar>();
 
@@ -66,7 +65,7 @@ namespace JetBlack.Bloomberg
                         element.GetElementAsInt64("volume")));
             }
 
-            asyncHandler.OnSuccess(new TickerIntradayBarData(ticker, data, isPartialResponse));
+            asyncHandler.OnSuccess(new TickerIntradayBarData(ticker, data, entitlementIds, isPartialResponse));
         }
     }
 }

@@ -47,7 +47,7 @@ namespace JetBlack.Bloomberg
 
             var tickData = message.GetElement("tickData");
             var tickDataArray = tickData.GetElement("tickData");
-            var eids = ExtractEids(tickData.HasElement("eidData") ? tickData.GetElement("eidData") : null);
+            var entitlementIds = tickData.HasElement("eidData") ? tickData.GetElement("eidData").ExtractEids() : null;
 
             var data = new List<IntradayTickData>();
 
@@ -64,26 +64,10 @@ namespace JetBlack.Bloomberg
                         item.GetElementAsFloat64("value"),
                         item.GetElementAsInt32("size"),
                         conditionCodes,
-                        exchangeCodes,
-                        eids));
+                        exchangeCodes));
             }
 
-            asyncHandler.OnSuccess(new TickerIntradayTickData(ticker, data));
+            asyncHandler.OnSuccess(new TickerIntradayTickData(ticker, data, entitlementIds));
         }
-
-        private static IList<int> ExtractEids(Element eidDataElement)
-        {
-            var eids = new List<int>();
-            if (eidDataElement != null)
-            {
-                for (var i = 0; i < eidDataElement.NumValues; ++i)
-                {
-                    var eid = eidDataElement.GetValueAsInt32(i);
-                    eids.Add(eid);
-                }
-            }
-            return eids;
-        }
-
     }
 }
