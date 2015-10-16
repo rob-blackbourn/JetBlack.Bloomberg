@@ -48,9 +48,7 @@ namespace JetBlack.Bloomberg
             if (_partial.TryGetValue(message.CorrelationID, out historicalTickerDataMap))
                 _partial.Remove(message.CorrelationID);
             else
-            {
                 historicalTickerDataMap = new Dictionary<string, IDictionary<DateTime, IDictionary<string, object>>>();
-            }
 
             var securityDataArray = message.GetElement(ElementNames.SecurityData);
 

@@ -133,7 +133,7 @@ namespace JetBlack.Bloomberg
             
         }
 
-        public IPromise<TickerData> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester)
+        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester)
         {
             return _referenceDataManager.Request(Session, ReferenceDataService, requester);
         }
