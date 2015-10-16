@@ -138,7 +138,7 @@ namespace JetBlack.Bloomberg
             return _referenceDataManager.Request(Session, ReferenceDataService, requester);
         }
 
-        public IPromise<HistoricalTickerData> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
+        public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
         {
             return RequestHistoricalData(
                 new HistoricalDataRequester
@@ -154,7 +154,7 @@ namespace JetBlack.Bloomberg
                 });
         }
 
-        public IPromise<HistoricalTickerData> RequestHistoricalData(HistoricalDataRequester requester)
+        public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequester requester)
         {
             return _historicalDataManager.Request(Session, ReferenceDataService, requester);
         }

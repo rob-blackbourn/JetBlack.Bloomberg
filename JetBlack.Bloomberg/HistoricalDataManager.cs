@@ -11,18 +11,19 @@ namespace JetBlack.Bloomberg
 {
     public class HistoricalDataManager
     {
-        private readonly IDictionary<CorrelationID, AsyncPattern<HistoricalTickerData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<HistoricalTickerData>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>>();
+        private readonly IDictionary<CorrelationID, IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> _partial = new Dictionary<CorrelationID, IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>();
 
-        public IPromise<HistoricalTickerData> Request(Session session, Service refDataService, HistoricalDataRequester requester)
+        public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> Request(Session session, Service refDataService, HistoricalDataRequester requester)
         {
-            return new Promise<HistoricalTickerData>((resolve, reject) =>
+            return new Promise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>((resolve, reject) =>
             {
                 var requests = requester.CreateRequests(refDataService);
 
                 foreach (var request in requests)
                 {
                     var correlationId = new CorrelationID();
-                    _asyncHandlers.Add(correlationId, AsyncPattern<HistoricalTickerData>.Create(resolve, reject));
+                    _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>.Create(resolve, reject));
                     session.SendRequest(request, correlationId);
                 }
             });
@@ -30,16 +31,25 @@ namespace JetBlack.Bloomberg
 
         public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<HistoricalTickerData> asyncHandler;
+            AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> asyncHandler;
             if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
             }
 
-            if (message.HasElement(ElementNames.ResponseError))
+            if (!message.HasElement(ElementNames.ResponseError))
             {
+                asyncHandler.OnFailure(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
                 return;
+            }
+
+            IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>> historicalTickerDataMap;
+            if (_partial.TryGetValue(message.CorrelationID, out historicalTickerDataMap))
+                _partial.Remove(message.CorrelationID);
+            else
+            {
+                historicalTickerDataMap = new Dictionary<string, IDictionary<DateTime, IDictionary<string, object>>>();
             }
 
             var securityDataArray = message.GetElement(ElementNames.SecurityData);
@@ -55,13 +65,17 @@ namespace JetBlack.Bloomberg
                     continue;
                 }
 
-                var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
+                IDictionary<DateTime, IDictionary<string, object>> historicalTickerData;
+                if (historicalTickerDataMap.TryGetValue(ticker, out historicalTickerData))
+                    historicalTickerDataMap.Remove(ticker);
+                else
+                    historicalTickerData = new Dictionary<DateTime,IDictionary<string,object>>();
 
-                var data = new Dictionary<DateTime, IDictionary<string, object>>();
+                var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
 
                 for (var j = 0; j < fieldDataArray.NumValues; ++j)
                 {
-                    var messageWrapper = new Dictionary<string, object>();
+                    var data = new Dictionary<string, object>();
                     var fieldData = fieldDataArray.GetValueAsElement(j);
 
                     for (var k = 0; k < fieldData.NumElements; ++k)
@@ -69,22 +83,27 @@ namespace JetBlack.Bloomberg
                         var field = fieldData.GetElement(k);
                         var name = field.Name.ToString();
                         var value = field.GetFieldValue();
-                        if (messageWrapper.ContainsKey(name))
-                            messageWrapper[name] = value;
+                        if (data.ContainsKey(name))
+                            data[name] = value;
                         else
-                            messageWrapper.Add(name, value);
+                            data.Add(name, value);
                     }
 
-                    if (messageWrapper.ContainsKey("date"))
+                    if (data.ContainsKey("date"))
                     {
-                        var date = (DateTime)messageWrapper["date"];
-                        messageWrapper.Remove("date");
-                        data.Add(date, messageWrapper);
+                        var date = (DateTime)data["date"];
+                        data.Remove("date");
+                        historicalTickerData.Add(date, data);
                     }
                 }
 
-                asyncHandler.OnSuccess(new HistoricalTickerData(ticker, data, isPartialResponse));
+                historicalTickerDataMap[ticker] = historicalTickerData;
             }
+
+            if (isPartialResponse)
+                _partial[message.CorrelationID] = historicalTickerDataMap;
+            else
+                asyncHandler.OnSuccess(historicalTickerDataMap);
         }
     }
 }
