@@ -14,11 +14,11 @@ namespace JetBlack.Bloomberg
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>>();
         private readonly IDictionary<CorrelationID, TickerIntradayBarData> _partial = new Dictionary<CorrelationID, TickerIntradayBarData>();
 
-        public IPromise<TickerIntradayBarData> Request(Session session, Service refDataService, IntradayBarRequester requester)
+        public IPromise<TickerIntradayBarData> Request(Session session, Service refDataService, IntradayBarRequestFactory requestFactory)
         {
             return new Promise<TickerIntradayBarData>((resolve, reject) =>
             {
-                var requests = requester.CreateRequests(refDataService);
+                var requests = requestFactory.CreateRequests(refDataService);
 
                 foreach (var request in requests)
                 {

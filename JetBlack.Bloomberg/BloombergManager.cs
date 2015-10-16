@@ -118,7 +118,7 @@ namespace JetBlack.Bloomberg
         public IPromise<TickerIntradayTickData> RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
         {
             return RequestIntradayTick(
-                new IntradayTickRequester
+                new IntradayTickRequestFactory
                 {
                     Tickers = tickers,
                     EventTypes = eventTypes,
@@ -127,21 +127,21 @@ namespace JetBlack.Bloomberg
                 });
         }
 
-        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequester request)
+        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequestFactory request)
         {
             return _intraDayTickManager.Request(Session, ReferenceDataService, request);
             
         }
 
-        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequester requester)
+        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(Session session, Service refDataService, ReferenceDataRequestFactory requestFactory)
         {
-            return _referenceDataManager.Request(Session, ReferenceDataService, requester);
+            return _referenceDataManager.Request(Session, ReferenceDataService, requestFactory);
         }
 
         public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
         {
             return RequestHistoricalData(
-                new HistoricalDataRequester
+                new HistoricalDataRequestFactory
                 {
                     Tickers = tickers,
                     Fields = fields,
@@ -154,15 +154,15 @@ namespace JetBlack.Bloomberg
                 });
         }
 
-        public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequester requester)
+        public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequestFactory requestFactory)
         {
-            return _historicalDataManager.Request(Session, ReferenceDataService, requester);
+            return _historicalDataManager.Request(Session, ReferenceDataService, requestFactory);
         }
 
         public IPromise<TickerIntradayBarData> RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
         {
             return RequestIntradayBar(
-                new IntradayBarRequester
+                new IntradayBarRequestFactory
                 {
                     Tickers = tickers,
                     StartDateTime = startDateTime,
@@ -172,9 +172,9 @@ namespace JetBlack.Bloomberg
                 });
         }
 
-        public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequester requester)
+        public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequestFactory requestFactory)
         {
-            return _intradayBarManager.Request(Session, ReferenceDataService, requester);
+            return _intradayBarManager.Request(Session, ReferenceDataService, requestFactory);
         }
 
         private void HandleMessage(Event eventArgs, Session session)

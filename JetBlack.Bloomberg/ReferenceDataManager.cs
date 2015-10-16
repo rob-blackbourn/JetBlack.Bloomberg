@@ -14,11 +14,11 @@ namespace JetBlack.Bloomberg
         private readonly IDictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>>();
         private readonly IDictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>> _partial = new Dictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>>();
 
-        public IPromise<IDictionary<string,IDictionary<string,object>>> Request(Session session, Service refDataService, ReferenceDataRequester requester)
+        public IPromise<IDictionary<string,IDictionary<string,object>>> Request(Session session, Service refDataService, ReferenceDataRequestFactory requestFactory)
         {
             return new Promise<IDictionary<string,IDictionary<string,object>>>((resolve, reject) =>
             {
-                var requests = requester.CreateRequests(refDataService);
+                var requests = requestFactory.CreateRequests(refDataService);
 
                 foreach (var request in requests)
                 {

@@ -3,7 +3,7 @@ using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class ReferenceDataRequester : Requester
+    public class ReferenceDataRequestFactory : RequestFactory
     {
         public IEnumerable<string> Fields { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }

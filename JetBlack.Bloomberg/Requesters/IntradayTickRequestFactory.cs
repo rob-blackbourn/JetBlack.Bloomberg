@@ -4,7 +4,7 @@ using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class IntradayTickRequester : Requester
+    public class IntradayTickRequestFactory : RequestFactory
     {
         public DateTime StartDateTime { get; set; }
         public DateTime EndDateTime { get; set; }

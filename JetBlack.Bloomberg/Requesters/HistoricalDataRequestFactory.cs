@@ -4,7 +4,7 @@ using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class HistoricalDataRequester : Requester
+    public class HistoricalDataRequestFactory : RequestFactory
     {
         public IList<string> Fields { get; set; }
         public DateTime StartDate { get; set; }
