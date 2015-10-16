@@ -93,17 +93,9 @@
     <Compile Include="Requesters\IntradayBarRequestFactory.cs" />
     <Compile Include="Models\IntradayTickData.cs" />
     <Compile Include="Requesters\IntradayTickRequestFactory.cs" />
-    <Compile Include="Messages\AdminStatusEventArgs.cs" />
-    <Compile Include="Messages\AuthenticationStatusEventArgs.cs" />
-    <Compile Include="Messages\AuthorizationFailureEventArgs.cs" />
-    <Compile Include="Messages\AuthorizationSuccessEventArgs.cs" />
     <Compile Include="Messages\EventArgsException.cs" />
-    <Compile Include="Messages\ServiceOpenedEventArgs.cs" />
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
-    <Compile Include="Messages\SessionEventArgs.cs" />
-    <Compile Include="Messages\SessionStatusEventArgs.cs" />
     <Compile Include="Messages\SubscriptionFailureEventArgs.cs" />
-    <Compile Include="Messages\SubscriptionStatusEventArgs.cs" />
     <Compile Include="Models\TokenGenerationFailure.cs" />
     <Compile Include="MessageTypeNames.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
