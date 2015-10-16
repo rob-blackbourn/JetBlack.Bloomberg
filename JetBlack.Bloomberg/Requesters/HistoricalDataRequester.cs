@@ -25,56 +25,55 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? AdjustmentFollowDpdf { get; set; }
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
-        public override bool MapTickers { get { return true; } }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
-            var request = refDataService.CreateRequest("HistoricalDataRequest");
+            var request = refDataService.CreateRequest(OperationNames.HistoricalDataRequest);
 
             foreach (var ticker in Tickers)
-                request.Append("securities", ticker);
+                request.Append(ElementNames.Securities, ticker);
 
             foreach (var field in Fields)
-                request.Append("fields", field);
+                request.Append(ElementNames.Fields, field);
 
-            request.Set("startDate", StartDate.ToString("yyyyMMdd"));
-            request.Set("endDate", EndDate.ToString("yyyyMMdd"));
-            request.Set("periodicitySelection", PeriodicitySelection.ToString());
-            request.Set("periodicityAdjustment", PeriodicityAdjustment.ToString());
+            request.Set(ElementNames.StartDate, StartDate.ToString("yyyyMMdd"));
+            request.Set(ElementNames.EndDate, EndDate.ToString("yyyyMMdd"));
+            request.Set(ElementNames.PeriodicitySelection, PeriodicitySelection.ToString());
+            request.Set(ElementNames.PeriodicityAdjustment, PeriodicityAdjustment.ToString());
             if (!string.IsNullOrEmpty(Currency))
-                request.Set("currency", Currency);
+                request.Set(ElementNames.Currency, Currency);
             if (OverrideOption.HasValue)
-                request.Set("overrideOption", OverrideOption.Value.ToString());
+                request.Set(ElementNames.OverrideOption, OverrideOption.Value.ToString());
             if (PricingOption.HasValue)
-                request.Set("pricingOption", PricingOption.Value.ToString());
+                request.Set(ElementNames.PricingOption, PricingOption.Value.ToString());
             if (NonTradingDayFillOption.HasValue)
-                request.Set("nonTradingDayFillOption", NonTradingDayFillOption.Value.ToString());
+                request.Set(ElementNames.NonTradingDayFillOption, NonTradingDayFillOption.Value.ToString());
             if (NonTradingDayFillMethod.HasValue)
-                request.Set("nonTradingDayFillMethod", NonTradingDayFillMethod.Value.ToString());
+                request.Set(ElementNames.NonTradingDayFillMethod, NonTradingDayFillMethod.Value.ToString());
             if (MaxDataPoints.HasValue)
-                request.Set("maxDataPoints", MaxDataPoints.Value);
+                request.Set(ElementNames.MaxDataPoints, MaxDataPoints.Value);
             if (ReturnEids.HasValue)
-                request.Set("returnEids", ReturnEids.Value);
+                request.Set(ElementNames.ReturnEids, ReturnEids.Value);
             if (ReturnRelativeDate.HasValue)
-                request.Set("returnRelativeDate", ReturnRelativeDate.Value);
+                request.Set(ElementNames.ReturnRelativeDate, ReturnRelativeDate.Value);
             if (AdjustmentNormal.HasValue)
-                request.Set("adjustmentNormal", AdjustmentNormal.Value);
+                request.Set(ElementNames.AdjustmentNormal, AdjustmentNormal.Value);
             if (AdjustmentAbnormal.HasValue)
-                request.Set("adjustmentAbnormal", AdjustmentAbnormal.Value);
+                request.Set(ElementNames.AdjustmentAbnormal, AdjustmentAbnormal.Value);
             if (AdjustmentSplit.HasValue)
-                request.Set("adjustmentSplit", AdjustmentSplit.Value);
+                request.Set(ElementNames.AdjustmentSplit, AdjustmentSplit.Value);
             if (AdjustmentFollowDpdf.HasValue)
-                request.Set("adjustmentFollowDPDF", AdjustmentFollowDpdf.Value);
+                request.Set(ElementNames.AdjustmentFollowDPDF, AdjustmentFollowDpdf.Value);
             if (CalendarCodeOverride.HasValue)
-                request.Set("calendarCodeOverride", CalendarCodeOverride.Value);
+                request.Set(ElementNames.CalendarCodeOverride, CalendarCodeOverride.Value);
 
             if (Overrides != null)
             {
                 foreach (var pair in Overrides)
                 {
-                    var requestOverride = request["overrides"].AppendElement();
-                    requestOverride.SetElement("fieldId", pair.Key);
-                    requestOverride.SetElement("value", pair.Value);
+                    var requestOverride = request[ElementNames.Overrides].AppendElement();
+                    requestOverride.SetElement(ElementNames.FieldId, pair.Key);
+                    requestOverride.SetElement(ElementNames.Value, pair.Value);
                 }
             }
 

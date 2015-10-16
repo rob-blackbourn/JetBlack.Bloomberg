@@ -16,8 +16,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? AdjustmentNormal { get; set; }
         public bool? AdjustmentAbnormal { get; set; }
         public bool? AdjustmentSplit { get; set; }
-        public bool? AdjustmentFollowDpdf { get; set; }
-        public override bool MapTickers { get { return true; } }
+        public bool? AdjustmentFollowDPDF { get; set; }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
@@ -25,28 +24,28 @@ namespace JetBlack.Bloomberg.Requesters
 
             foreach (var ticker in Tickers)
             {
-                var request = refDataService.CreateRequest("IntradayBarRequest");
+                var request = refDataService.CreateRequest(OperationNames.IntradayBarRequest);
 
-                request.Set("security", ticker);
-                request.Set("startDateTime", new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
-                request.Set("endDateTime", new Datetime(EndDateTime.Year, EndDateTime.Month, EndDateTime.Day, EndDateTime.Hour, EndDateTime.Minute, EndDateTime.Second, EndDateTime.Millisecond));
-                request.Set("eventType", EventType.ToString());
+                request.Set(ElementNames.Security, ticker);
+                request.Set(ElementNames.StartDateTime, new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
+                request.Set(ElementNames.EndDateTime, new Datetime(EndDateTime.Year, EndDateTime.Month, EndDateTime.Day, EndDateTime.Hour, EndDateTime.Minute, EndDateTime.Second, EndDateTime.Millisecond));
+                request.Set(ElementNames.EventType, EventType.ToString());
                 if (Interval.HasValue)
-                    request.Set("interval", Interval.Value);
+                    request.Set(ElementNames.Interval, Interval.Value);
                 if (GapFillInitialBar.HasValue)
-                    request.Set("gapFillInitialBar", GapFillInitialBar.Value);
+                    request.Set(ElementNames.GapFillInitialBar, GapFillInitialBar.Value);
                 if (ReturnEids.HasValue)
-                    request.Set("returnEids", ReturnEids.Value);
+                    request.Set(ElementNames.ReturnEids, ReturnEids.Value);
                 if (ReturnRelativeDate.HasValue)
-                    request.Set("returnRelativeDate", ReturnRelativeDate.Value);
+                    request.Set(ElementNames.ReturnRelativeDate, ReturnRelativeDate.Value);
                 if (AdjustmentNormal.HasValue)
-                    request.Set("adjustmentNormal", AdjustmentNormal.Value);
+                    request.Set(ElementNames.AdjustmentNormal, AdjustmentNormal.Value);
                 if (AdjustmentAbnormal.HasValue)
-                    request.Set("adjustmentAbnormal", AdjustmentAbnormal.Value);
+                    request.Set(ElementNames.AdjustmentAbnormal, AdjustmentAbnormal.Value);
                 if (AdjustmentSplit.HasValue)
-                    request.Set("adjustmentSplit", AdjustmentSplit.Value);
-                if (AdjustmentFollowDpdf.HasValue)
-                    request.Set("adjustmentFollowDPDF", AdjustmentFollowDpdf.Value);
+                    request.Set(ElementNames.AdjustmentSplit, AdjustmentSplit.Value);
+                if (AdjustmentFollowDPDF.HasValue)
+                    request.Set(ElementNames.AdjustmentFollowDPDF, AdjustmentFollowDPDF.Value);
 
                 requests.Add(request);
             }

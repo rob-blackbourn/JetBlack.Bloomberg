@@ -15,7 +15,6 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? ReturnEids { get; set; }
         public bool? IncludeBrokerCodes { get; set; }
         public bool? IncludeRpsCodes { get; set; }
-        public override bool MapTickers { get { return true; } }
 
         public override IEnumerable<Request> CreateRequests(Service refDataService)
         {
@@ -23,26 +22,26 @@ namespace JetBlack.Bloomberg.Requesters
 
             foreach (var ticker in Tickers)
             {
-                var request = refDataService.CreateRequest("IntradayTickRequest");
-                request.Set("security", ticker);
+                var request = refDataService.CreateRequest(OperationNames.IntradayTickRequest);
+                request.Set(ElementNames.Security, ticker);
 
                 foreach (var eventType in EventTypes)
-                    request.Append("eventTypes", eventType.ToString());
+                    request.Append(ElementNames.EventTypes, eventType.ToString());
 
-                request.Set("startDateTime", new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
-                request.Set("endDateTime", new Datetime(EndDateTime.Year, EndDateTime.Month, EndDateTime.Day, EndDateTime.Hour, EndDateTime.Minute, EndDateTime.Second, EndDateTime.Millisecond));
+                request.Set(ElementNames.StartDateTime, new Datetime(StartDateTime.Year, StartDateTime.Month, StartDateTime.Day, StartDateTime.Hour, StartDateTime.Minute, StartDateTime.Second, StartDateTime.Millisecond));
+                request.Set(ElementNames.EndDateTime, new Datetime(EndDateTime.Year, EndDateTime.Month, EndDateTime.Day, EndDateTime.Hour, EndDateTime.Minute, EndDateTime.Second, EndDateTime.Millisecond));
                 if (IncludeBrokerCodes.HasValue)
-                    request.Set("includeBrokerCodes", IncludeBrokerCodes.Value);
+                    request.Set(ElementNames.IncludeBrokerCodes, IncludeBrokerCodes.Value);
                 if (IncludeConditionCodes.HasValue)
-                    request.Set("includeConditionCodes", IncludeConditionCodes.Value);
+                    request.Set(ElementNames.IncludeConditionCodes, IncludeConditionCodes.Value);
                 if (IncludeExchangeCodes.HasValue)
-                    request.Set("includeExchangeCodes", IncludeExchangeCodes.Value);
+                    request.Set(ElementNames.IncludeExchangeCodes, IncludeExchangeCodes.Value);
                 if (IncludeNonPlottableEvents.HasValue)
-                    request.Set("includeNonPlottableEvents", IncludeNonPlottableEvents.Value);
+                    request.Set(ElementNames.IncludeNonPlottableEvents, IncludeNonPlottableEvents.Value);
                 if (IncludeRpsCodes.HasValue)
-                    request.Set("includeRpsCodes", IncludeRpsCodes.Value);
+                    request.Set(ElementNames.IncludeRpsCodes, IncludeRpsCodes.Value);
                 if (ReturnEids.HasValue)
-                    request.Set("returnEids", ReturnEids.Value);
+                    request.Set(ElementNames.ReturnEids, ReturnEids.Value);
                 requests.Add(request);
             }
             return requests;
