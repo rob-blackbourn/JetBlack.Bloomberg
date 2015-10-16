@@ -12,6 +12,7 @@ namespace JetBlack.Bloomberg
     public class IntradayBarManager
     {
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>>();
+        private readonly IDictionary<CorrelationID, TickerIntradayBarData> _partial = new Dictionary<CorrelationID, TickerIntradayBarData>();
 
         public IPromise<TickerIntradayBarData> Request(Session session, Service refDataService, IntradayBarRequester requester)
         {
@@ -46,15 +47,20 @@ namespace JetBlack.Bloomberg
             }
 
             var barData = message.GetElement("barData");
-            var barTickData = barData.GetElement("barTickData");
-            var entitlementIds = barData.HasElement("eidData") ? barData.GetElement("eidData").ExtractEids() : null;
 
-            var data = new List<IntradayBar>();
+            TickerIntradayBarData tickerIntradayBarData;
+            if (!_partial.TryGetValue(message.CorrelationID, out tickerIntradayBarData))
+            {
+                var entitlementIds = barData.HasElement("eidData") ? barData.GetElement("eidData").ExtractEids() : null;
+                tickerIntradayBarData = new TickerIntradayBarData(ticker, new List<IntradayBar>(), entitlementIds);
+            }
+
+            var barTickData = barData.GetElement("barTickData");
 
             for (var i = 0; i < barTickData.NumValues; ++i)
             {
                 var element = barTickData.GetValueAsElement(i);
-                data.Add(
+                tickerIntradayBarData.IntradayBars.Add(
                     new IntradayBar(
                         element.GetElementAsDatetime("time").ToDateTime(),
                         element.GetElementAsFloat64("open"),
@@ -65,7 +71,10 @@ namespace JetBlack.Bloomberg
                         element.GetElementAsInt64("volume")));
             }
 
-            asyncHandler.OnSuccess(new TickerIntradayBarData(ticker, data, entitlementIds, isPartialResponse));
+            if (isPartialResponse)
+                _partial[message.CorrelationID] = tickerIntradayBarData;
+            else
+                asyncHandler.OnSuccess(tickerIntradayBarData);
         }
     }
 }
