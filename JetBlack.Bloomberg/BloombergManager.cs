@@ -52,8 +52,15 @@ namespace JetBlack.Bloomberg
             if (!Session.Start())
                 throw new Exception("Failed to start session");
 
-            MarketDataService = OpenService("//blp/mktdata");
-            ReferenceDataService = OpenService("//blp/refdata");
+            Identity = Session.CreateIdentity();
+
+            AuthorisationService = OpenService(ServiceUris.AuthenticationService);
+            Authenticator = _authenticatorFactory(this);
+            Authenticator.Authenticate(Session, AuthorisationService);
+
+            MarketDataService = OpenService(ServiceUris.MarketDataService);
+            ReferenceDataService = OpenService(ServiceUris.ReferenceDataService);
+            RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
         }
 
         public void StartAsync()
