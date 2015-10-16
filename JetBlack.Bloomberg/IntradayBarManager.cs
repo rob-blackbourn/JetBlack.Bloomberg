@@ -49,7 +49,9 @@ namespace JetBlack.Bloomberg
             var barData = message.GetElement("barData");
 
             TickerIntradayBarData tickerIntradayBarData;
-            if (!_partial.TryGetValue(message.CorrelationID, out tickerIntradayBarData))
+            if (_partial.TryGetValue(message.CorrelationID, out tickerIntradayBarData))
+                _partial.Remove(message.CorrelationID);
+            else
             {
                 var entitlementIds = barData.HasElement("eidData") ? barData.GetElement("eidData").ExtractEids() : null;
                 tickerIntradayBarData = new TickerIntradayBarData(ticker, new List<IntradayBar>(), entitlementIds);
