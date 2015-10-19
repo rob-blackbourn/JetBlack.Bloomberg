@@ -29,7 +29,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
 
-        public IEnumerable<Request> CreateRequests(Service refDataService)
+        public Request CreateRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.HistoricalDataRequest);
 
@@ -80,7 +80,7 @@ namespace JetBlack.Bloomberg.Requesters
                 }
             }
 
-            return new[] { request };
+            return request;
         }
     }
 }

@@ -20,14 +20,10 @@ namespace JetBlack.Bloomberg.Managers
         {
             return new Promise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>((resolve, reject) =>
             {
-                var requests = requestFactory.CreateRequests(refDataService);
-
-                foreach (var request in requests)
-                {
-                    var correlationId = new CorrelationID();
-                    _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>.Create(resolve, reject));
-                    session.SendRequest(request, identity, correlationId);
-                }
+                var request = requestFactory.CreateRequest(refDataService);
+                var correlationId = new CorrelationID();
+                _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>.Create(resolve, reject));
+                session.SendRequest(request, identity, correlationId);
             });
         }
 
