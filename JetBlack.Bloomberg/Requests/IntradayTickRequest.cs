@@ -4,9 +4,9 @@ using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 
-namespace JetBlack.Bloomberg.Requesters
+namespace JetBlack.Bloomberg.Requests
 {
-    public class IntradayTickRequestFactory
+    public class IntradayTickRequest
     {
         public string Ticker { get; set; }
         public DateTime StartDateTime { get; set; }
@@ -19,7 +19,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? IncludeBrokerCodes { get; set; }
         public bool? IncludeRpsCodes { get; set; }
 
-        public Request CreateRequest(Service refDataService)
+        public Request Create(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.IntradayTickRequest);
             request.Set(ElementNames.Security, Ticker);

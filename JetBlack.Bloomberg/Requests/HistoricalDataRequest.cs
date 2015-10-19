@@ -4,9 +4,9 @@ using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 
-namespace JetBlack.Bloomberg.Requesters
+namespace JetBlack.Bloomberg.Requests
 {
-    public class HistoricalDataRequestFactory
+    public class HistoricalDataRequest
     {
         public ICollection<string> Tickers { get; set; }
         public IList<string> Fields { get; set; }
@@ -29,7 +29,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
 
-        public Request CreateRequest(Service refDataService)
+        public Request Create(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.HistoricalDataRequest);
 

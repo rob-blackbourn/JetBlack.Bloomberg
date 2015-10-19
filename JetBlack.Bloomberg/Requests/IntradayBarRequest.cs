@@ -3,9 +3,9 @@ using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 
-namespace JetBlack.Bloomberg.Requesters
+namespace JetBlack.Bloomberg.Requests
 {
-    public class IntradayBarRequestFactory
+    public class IntradayBarRequest
     {
         public string Ticker { get; set; }
         public DateTime StartDateTime { get; set; }
@@ -20,7 +20,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? AdjustmentSplit { get; set; }
         public bool? AdjustmentFollowDPDF { get; set; }
 
-        public Request CreateRequest(Service refDataService)
+        public Request Create(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.IntradayBarRequest);
 

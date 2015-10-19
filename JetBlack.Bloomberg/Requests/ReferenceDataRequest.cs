@@ -2,9 +2,9 @@
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 
-namespace JetBlack.Bloomberg.Requesters
+namespace JetBlack.Bloomberg.Requests
 {
-    public class ReferenceDataRequestFactory
+    public class ReferenceDataRequest
     {
         public ICollection<string> Tickers { get; set; }
         public IEnumerable<string> Fields { get; set; }
@@ -14,7 +14,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? UseUtcTime { get; set; }
         public bool? ForcedDelay { get; set; }
 
-        public Request CreateRequest(Service refDataService)
+        public Request Create(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.ReferenceDataRequest);
 

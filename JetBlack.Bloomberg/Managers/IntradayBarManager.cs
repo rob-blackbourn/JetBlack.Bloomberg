@@ -5,7 +5,7 @@ using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
-using JetBlack.Bloomberg.Requesters;
+using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 
@@ -17,15 +17,14 @@ namespace JetBlack.Bloomberg.Managers
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>();
         private readonly IDictionary<CorrelationID, TickerIntradayBarData> _partial = new Dictionary<CorrelationID, TickerIntradayBarData>();
 
-        public IPromise<TickerIntradayBarData> Request(Session session, Identity identity, Service refDataService, IntradayBarRequestFactory requestFactory)
+        public IPromise<TickerIntradayBarData> Request(Session session, Identity identity, Service refDataService, IntradayBarRequest request)
         {
             return new Promise<TickerIntradayBarData>((resolve, reject) =>
             {
-                var request = requestFactory.CreateRequest(refDataService);
                 var correlationId = new CorrelationID();
                 _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayBarData>.Create(resolve, reject));
-                _tickerMap.Add(correlationId, requestFactory.Ticker);
-                session.SendRequest(request, identity, correlationId);
+                _tickerMap.Add(correlationId, request.Ticker);
+                session.SendRequest(request.Create(refDataService), identity, correlationId);
             });
         }
 

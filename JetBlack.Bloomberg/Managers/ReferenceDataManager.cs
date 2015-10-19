@@ -5,7 +5,7 @@ using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
-using JetBlack.Bloomberg.Requesters;
+using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 
@@ -16,14 +16,13 @@ namespace JetBlack.Bloomberg.Managers
         private readonly IDictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>>();
         private readonly IDictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>> _partial = new Dictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>>();
 
-        public IPromise<IDictionary<string, IDictionary<string, object>>> Request(Session session, Identity identity, Service refDataService, ReferenceDataRequestFactory requestFactory)
+        public IPromise<IDictionary<string, IDictionary<string, object>>> Request(Session session, Identity identity, Service refDataService, ReferenceDataRequest request)
         {
             return new Promise<IDictionary<string, IDictionary<string, object>>>((resolve, reject) =>
             {
-                var request = requestFactory.CreateRequest(refDataService);
                 var correlationId = new CorrelationID();
                 _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<string, object>>>.Create(resolve, reject));
-                session.SendRequest(request, identity, correlationId);
+                session.SendRequest(request.Create(refDataService), identity, correlationId);
             });
         }
 
