@@ -14,7 +14,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? UseUtcTime { get; set; }
         public bool? ForcedDelay { get; set; }
 
-        public IEnumerable<Request> CreateRequests(Service refDataService)
+        public Request CreateRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.ReferenceDataRequest);
 
@@ -43,7 +43,7 @@ namespace JetBlack.Bloomberg.Requesters
             if (UseUtcTime.HasValue)
                 request.Set(ElementNames.UseUTCTime, UseUtcTime.Value);
 
-            return new[] { request };
+            return request;
         }
     }
 }

@@ -16,18 +16,14 @@ namespace JetBlack.Bloomberg.Managers
         private readonly IDictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IDictionary<string,IDictionary<string,object>>>>();
         private readonly IDictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>> _partial = new Dictionary<CorrelationID, IDictionary<string, IDictionary<string, object>>>();
 
-        public IPromise<IDictionary<string,IDictionary<string,object>>> Request(Session session, Identity identity, Service refDataService, ReferenceDataRequestFactory requestFactory)
+        public IPromise<IDictionary<string, IDictionary<string, object>>> Request(Session session, Identity identity, Service refDataService, ReferenceDataRequestFactory requestFactory)
         {
-            return new Promise<IDictionary<string,IDictionary<string,object>>>((resolve, reject) =>
+            return new Promise<IDictionary<string, IDictionary<string, object>>>((resolve, reject) =>
             {
-                var requests = requestFactory.CreateRequests(refDataService);
-
-                foreach (var request in requests)
-                {
-                    var correlationId = new CorrelationID();
-                    _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string,IDictionary<string,object>>>.Create(resolve, reject));
-                    session.SendRequest(request, identity, correlationId);
-                }
+                var request = requestFactory.CreateRequest(refDataService);
+                var correlationId = new CorrelationID();
+                _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<string, object>>>.Create(resolve, reject));
+                session.SendRequest(request, identity, correlationId);
             });
         }
 
