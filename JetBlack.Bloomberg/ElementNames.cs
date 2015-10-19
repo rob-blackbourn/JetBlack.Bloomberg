@@ -13,6 +13,8 @@ namespace JetBlack.Bloomberg
         public static readonly Name Code = Name.GetName("code");
         public static readonly Name Currency = Name.GetName("currency");
         public static readonly Name Description = Name.GetName("description");
+        public static readonly Name EidData = Name.GetName("eidData");
+        public static readonly Name Eids = Name.GetName("eids");
         public static readonly Name EndDate = Name.GetName("endDate");
         public static readonly Name EndDateTime = Name.GetName("endDateTime");
         public static readonly Name ErrorInfo = Name.GetName("errorInfo");

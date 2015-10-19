@@ -62,8 +62,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />
+    <Compile Include="Models\SecurityEntitlements.cs" />
     <Compile Include="OperationNames.cs" />
     <Compile Include="Patterns\AsyncPattern.cs" />
     <Compile Include="Authenticators\AuthenticationMethod.cs" />

@@ -25,6 +25,7 @@ namespace JetBlack.Bloomberg
 
         public TokenManager TokenManager { get; private set; }
         public ServiceManager ServiceManager { get; private set; }
+        public SecurityEntitlementsManager SecurityEntitlementsManager { get; private set; }
         public SubscriptionManager SubscriptionManager { get; private set; }
         public ReferenceDataManager ReferenceDataManager { get; private set; }
         public HistoricalDataManager HistoricalDataManager { get; private set; }
@@ -40,6 +41,7 @@ namespace JetBlack.Bloomberg
 
             TokenManager = new TokenManager();
             ServiceManager = new ServiceManager();
+            SecurityEntitlementsManager = new SecurityEntitlementsManager();
             SubscriptionManager = new SubscriptionManager();
             ReferenceDataManager = new ReferenceDataManager();
             HistoricalDataManager = new HistoricalDataManager();
@@ -135,6 +137,11 @@ namespace JetBlack.Bloomberg
         public IPromise<Service> RequestService(string uri)
         {
             return ServiceManager.Request(Session, uri);
+        }
+
+        public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers)
+        {
+            return SecurityEntitlementsManager.RequestEntitlements(Session, AuthorisationService, Identity, tickers);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
@@ -289,6 +296,8 @@ namespace JetBlack.Bloomberg
                     HistoricalDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
                     ReferenceDataManager.Process(session, message, isPartialResponse, OnFailure);
+                else if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
+                    SecurityEntitlementsManager.Process(session, message, isPartialResponse, OnFailure);
             }
         }
 
