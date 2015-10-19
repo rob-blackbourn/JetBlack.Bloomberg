@@ -1,6 +1,6 @@
 ﻿using Bloomberglp.Blpapi;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Identifiers
 {
     public static class ElementNames
     {

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Identifiers;
 
 namespace JetBlack.Bloomberg.Requesters
 {

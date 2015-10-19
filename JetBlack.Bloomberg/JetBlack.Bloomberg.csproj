@@ -62,24 +62,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SecurityEntitlementsManager.cs" />
+    <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />
     <Compile Include="Models\SecurityEntitlements.cs" />
-    <Compile Include="OperationNames.cs" />
+    <Compile Include="Identifiers\OperationNames.cs" />
     <Compile Include="Patterns\AsyncPattern.cs" />
     <Compile Include="Authenticators\AuthenticationMethod.cs" />
     <Compile Include="Authenticators\Authenticator.cs" />
     <Compile Include="Authenticators\BpipeAuthenticator.cs" />
     <Compile Include="Authenticators\IAuthenticator.cs" />
     <Compile Include="Authenticators\SapiAuthenticator.cs" />
-    <Compile Include="BloombergManager.cs" />
-    <Compile Include="Declarations.cs" />
-    <Compile Include="ElementNames.cs" />
-    <Compile Include="ExtensionMethods.cs" />
-    <Compile Include="HistoricalDataManager.cs" />
-    <Compile Include="IntradayBarManager.cs" />
-    <Compile Include="IntraDayTickManager.cs" />
+    <Compile Include="BloombergController.cs" />
+    <Compile Include="Models\Declarations.cs" />
+    <Compile Include="Identifiers\ElementNames.cs" />
+    <Compile Include="Utilities\ExtensionMethods.cs" />
+    <Compile Include="Managers\HistoricalDataManager.cs" />
+    <Compile Include="Managers\IntradayBarManager.cs" />
+    <Compile Include="Managers\IntraDayTickManager.cs" />
     <Compile Include="Models\HistoricalTickerData.cs" />
     <Compile Include="Models\ReferenceDataResponse.cs" />
     <Compile Include="Models\ResponseError.cs" />
@@ -99,15 +99,15 @@
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
     <Compile Include="Messages\SubscriptionFailureEventArgs.cs" />
     <Compile Include="Models\TokenGenerationFailure.cs" />
-    <Compile Include="MessageTypeNames.cs" />
+    <Compile Include="Identifiers\MessageTypeNames.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReferenceDataManager.cs" />
+    <Compile Include="Managers\ReferenceDataManager.cs" />
     <Compile Include="Requesters\ReferenceDataRequestFactory.cs" />
     <Compile Include="Requesters\RequestFactory.cs" />
-    <Compile Include="ServiceManager.cs" />
-    <Compile Include="ServiceUris.cs" />
-    <Compile Include="SubscriptionManager.cs" />
-    <Compile Include="TokenManager.cs" />
+    <Compile Include="Managers\ServiceManager.cs" />
+    <Compile Include="Identifiers\ServiceUris.cs" />
+    <Compile Include="Managers\SubscriptionManager.cs" />
+    <Compile Include="Managers\TokenManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

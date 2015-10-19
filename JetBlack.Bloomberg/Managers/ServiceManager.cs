@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
+using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Patterns;
 using JetBlack.Monads;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Managers
 {
     public class ServiceManager
     {

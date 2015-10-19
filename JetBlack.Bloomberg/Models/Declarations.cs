@@ -1,4 +1,4 @@
-﻿namespace JetBlack.Bloomberg
+﻿namespace JetBlack.Bloomberg.Models
 {
     public enum SessionStatus
     {

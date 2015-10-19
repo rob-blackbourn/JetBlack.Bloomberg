@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Utilities
 {
     internal static class ExtensionMethods
     {

@@ -2,11 +2,13 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
+using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Managers
 {
     public class SecurityEntitlementsManager
     {

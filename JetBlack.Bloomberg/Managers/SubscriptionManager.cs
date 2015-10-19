@@ -4,10 +4,12 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
+using JetBlack.Bloomberg.Utilities;
 
-namespace JetBlack.Bloomberg
+namespace JetBlack.Bloomberg.Managers
 {
     public class SubscriptionManager
     {

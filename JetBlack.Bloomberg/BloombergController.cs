@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Authenticators;
+using JetBlack.Bloomberg.Identifiers;
+using JetBlack.Bloomberg.Managers;
 using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requesters;
+using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergManager
+    public class BloombergController
     {
-        private readonly Func<BloombergManager, IAuthenticator> _authenticatorFactory;
+        private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
         public event EventHandler<EventArgs<AdminStatus>> AdminStatus;
         public event EventHandler<EventArgs<bool>> AuthenticationStatus;
@@ -34,7 +37,7 @@ namespace JetBlack.Bloomberg
 
         public IAuthenticator Authenticator { get; private set; }
 
-        public BloombergManager(SessionOptions sessionOptions, Func<BloombergManager, IAuthenticator> authenticatorFactory)
+        public BloombergController(SessionOptions sessionOptions, Func<BloombergController, IAuthenticator> authenticatorFactory)
         {
             _authenticatorFactory = authenticatorFactory;
             Session = new Session(sessionOptions, HandleMessage);
@@ -267,10 +270,10 @@ namespace JetBlack.Bloomberg
                 switch (message.MessageType.ToString())
                 {
                     case "SlowConsumerWarning":
-                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Bloomberg.AdminStatus.SlowConsumerWarning));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Models.AdminStatus.SlowConsumerWarning));
                         break;
                     case "SlowConsumerWarningCleared":
-                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Bloomberg.AdminStatus.SlowConsumerWarningCleared));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Models.AdminStatus.SlowConsumerWarningCleared));
                         break;
                 }
             }
@@ -310,15 +313,15 @@ namespace JetBlack.Bloomberg
         private void ProcessSessionStatus(Message message)
         {
             if (MessageTypeNames.SessionStarted.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.Started));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.Started));
             if (MessageTypeNames.SessionTerminated.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.Terminated));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.Terminated));
             if (MessageTypeNames.SessionStartupFailure.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.StartupFailure));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.StartupFailure));
             if (MessageTypeNames.SessionConnectionUp.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.ConnectionUp));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.ConnectionUp));
             if (MessageTypeNames.SessionConnectionDown.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Bloomberg.SessionStatus.ConnectionDown));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.ConnectionDown));
         }
     }
 }

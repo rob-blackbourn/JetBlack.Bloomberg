@@ -1,4 +1,6 @@
 ﻿using Bloomberglp.Blpapi;
+using JetBlack.Bloomberg.Identifiers;
+using JetBlack.Bloomberg.Managers;
 using JetBlack.Bloomberg.Patterns;
 using JetBlack.Monads;
 

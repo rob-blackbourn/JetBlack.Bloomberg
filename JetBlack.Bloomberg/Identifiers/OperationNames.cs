@@ -1,4 +1,4 @@
-﻿namespace JetBlack.Bloomberg
+﻿namespace JetBlack.Bloomberg.Identifiers
 {
     public static class OperationNames
     {
