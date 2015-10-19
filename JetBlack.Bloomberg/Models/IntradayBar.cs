@@ -22,5 +22,10 @@ namespace JetBlack.Bloomberg.Models
         public double Close { get; private set; }
         public int NumEvents { get; private set; }
         public long Volume { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("Time={0}, Open={1}, High={2}, Low={3}, Close={4}, NumEvents={5}, Volume={6}", Time, Open, High, Low, Close, NumEvents, Volume);
+        }
     }
 }

@@ -196,12 +196,12 @@ namespace JetBlack.Bloomberg
             return HistoricalDataManager.Request(Session, Identity, ReferenceDataService, requestFactory);
         }
 
-        public IPromise<TickerIntradayBarData> RequestIntradayBar(ICollection<string> tickers, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
+        public IPromise<TickerIntradayBarData> RequestIntradayBar(string ticker, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
         {
             return RequestIntradayBar(
                 new IntradayBarRequestFactory
                 {
-                    Tickers = tickers,
+                    Ticker = ticker,
                     StartDateTime = startDateTime,
                     EndDateTime = endDateTime,
                     EventType = eventType,

@@ -14,20 +14,18 @@ namespace JetBlack.Bloomberg.Managers
     public class IntradayBarManager
     {
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayBarData>>();
+        private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>();
         private readonly IDictionary<CorrelationID, TickerIntradayBarData> _partial = new Dictionary<CorrelationID, TickerIntradayBarData>();
 
         public IPromise<TickerIntradayBarData> Request(Session session, Identity identity, Service refDataService, IntradayBarRequestFactory requestFactory)
         {
             return new Promise<TickerIntradayBarData>((resolve, reject) =>
             {
-                var requests = requestFactory.CreateRequests(refDataService);
-
-                foreach (var request in requests)
-                {
-                    var correlationId = new CorrelationID();
-                    _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayBarData>.Create(resolve, reject));
-                    session.SendRequest(request, identity, correlationId);
-                }
+                var request = requestFactory.CreateRequest(refDataService);
+                var correlationId = new CorrelationID();
+                _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayBarData>.Create(resolve, reject));
+                _tickerMap.Add(correlationId, requestFactory.Ticker);
+                session.SendRequest(request, identity, correlationId);
             });
         }
 
@@ -40,43 +38,47 @@ namespace JetBlack.Bloomberg.Managers
                 return;
             }
 
-            var ticker = message.TopicName;
+            var ticker = _tickerMap[message.CorrelationID];
+            _tickerMap.Remove(message.CorrelationID);
 
-            if (!message.HasElement(ElementNames.ResponseError))
+            if (message.HasElement(ElementNames.ResponseError))
             {
                 asyncHandler.OnFailure(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
                 return;
             }
 
-            var barData = message.GetElement("barData");
+            var barData = message.GetElement(ElementNames.BarData);
 
             TickerIntradayBarData tickerIntradayBarData;
             if (_partial.TryGetValue(message.CorrelationID, out tickerIntradayBarData))
                 _partial.Remove(message.CorrelationID);
             else
             {
-                var entitlementIds = barData.HasElement("eidData") ? barData.GetElement("eidData").ExtractEids() : null;
+                var entitlementIds = barData.HasElement(ElementNames.EidData) ? barData.GetElement(ElementNames.EidData).ExtractEids() : null;
                 tickerIntradayBarData = new TickerIntradayBarData(ticker, new List<IntradayBar>(), entitlementIds);
             }
 
-            var barTickData = barData.GetElement("barTickData");
+            var barTickData = barData.GetElement(ElementNames.BarTickData);
 
             for (var i = 0; i < barTickData.NumValues; ++i)
             {
                 var element = barTickData.GetValueAsElement(i);
                 tickerIntradayBarData.IntradayBars.Add(
                     new IntradayBar(
-                        element.GetElementAsDatetime("time").ToDateTime(),
-                        element.GetElementAsFloat64("open"),
-                        element.GetElementAsFloat64("high"),
-                        element.GetElementAsFloat64("low"),
-                        element.GetElementAsFloat64("close"),
-                        element.GetElementAsInt32("numEvents"),
-                        element.GetElementAsInt64("volume")));
+                        element.GetElementAsDatetime(ElementNames.Time).ToDateTime(),
+                        element.GetElementAsFloat64(ElementNames.Open),
+                        element.GetElementAsFloat64(ElementNames.High),
+                        element.GetElementAsFloat64(ElementNames.Low),
+                        element.GetElementAsFloat64(ElementNames.Close),
+                        element.GetElementAsInt32(ElementNames.NumEvents),
+                        element.GetElementAsInt64(ElementNames.Volume)));
             }
 
             if (isPartialResponse)
+            {
+                _tickerMap.Add(message.CorrelationID, ticker);
                 _partial[message.CorrelationID] = tickerIntradayBarData;
+            }
             else
                 asyncHandler.OnSuccess(tickerIntradayBarData);
         }
