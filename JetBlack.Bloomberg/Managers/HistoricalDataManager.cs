@@ -36,7 +36,7 @@ namespace JetBlack.Bloomberg.Managers
                 return;
             }
 
-            if (!message.HasElement(ElementNames.ResponseError))
+            if (message.HasElement(ElementNames.ResponseError))
             {
                 asyncHandler.OnFailure(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
                 return;
@@ -55,9 +55,9 @@ namespace JetBlack.Bloomberg.Managers
                 var securityData = securityDataArray.GetElement(i);
                 var ticker = securityData.GetValueAsString();
 
-                if (securityDataArray.HasElement("securityError"))
+                if (securityDataArray.HasElement(ElementNames.SecurityError))
                 {
-                    asyncHandler.OnFailure(new ContentException<TickerSecurityError>(new TickerSecurityError(ticker, securityDataArray.GetElement("securityError").ToSecurityError(), isPartialResponse)));
+                    asyncHandler.OnFailure(new ContentException<TickerSecurityError>(new TickerSecurityError(ticker, securityDataArray.GetElement(ElementNames.SecurityError).ToSecurityError(), isPartialResponse)));
                     continue;
                 }
 
