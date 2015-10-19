@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
@@ -11,23 +12,21 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class IntraDayTickManager
+    public class IntradayTickManager
     {
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>>();
+        private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>(); 
         private readonly IDictionary<CorrelationID, TickerIntradayTickData> _partial = new Dictionary<CorrelationID, TickerIntradayTickData>();
 
         public IPromise<TickerIntradayTickData> Request(Session session, Identity identity, Service refDataService, IntradayTickRequestFactory requestFactory)
         {
             return new Promise<TickerIntradayTickData>((resolve, reject) =>
             {
-                var requests = requestFactory.CreateRequests(refDataService);
-
-                foreach (var request in requests)
-                {
-                    var correlationId = new CorrelationID();
-                    _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayTickData>.Create(resolve, reject));
-                    session.SendRequest(request, identity, correlationId);
-                }
+                var request = requestFactory.CreateRequest(refDataService);
+                var correlationId = new CorrelationID();
+                _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayTickData>.Create(resolve, reject));
+                _tickerMap.Add(correlationId, requestFactory.Ticker);
+                session.SendRequest(request, identity, correlationId);
             });
         }
 
@@ -40,16 +39,16 @@ namespace JetBlack.Bloomberg.Managers
                 return;
             }
 
-            var ticker = message.TopicName;
+            var ticker = _tickerMap[message.CorrelationID];
+            _tickerMap.Remove(message.CorrelationID);
 
-            if (!message.HasElement(ElementNames.ResponseError))
+            if (message.HasElement(ElementNames.ResponseError))
             {
                 asyncHandler.OnFailure(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
                 return;
             }
 
-            var tickData = message.GetElement("tickData");
-            var tickDataArray = tickData.GetElement("tickData");
+            var tickData = message.GetElement("tickData").GetElement("tickData");
 
             TickerIntradayTickData tickerIntradayTickData;
             if (_partial.TryGetValue(message.CorrelationID, out tickerIntradayTickData))
@@ -60,9 +59,9 @@ namespace JetBlack.Bloomberg.Managers
                 tickerIntradayTickData = new TickerIntradayTickData(ticker, new List<IntradayTickData>(), entitlementIds);
             }
 
-            for (var i = 0; i < tickDataArray.NumValues; ++i)
+            for (var i = 0; i < tickData.NumValues; ++i)
             {
-                var item = tickDataArray.GetValueAsElement(i);
+                var item = tickData.GetValueAsElement(i);
                 var conditionCodes = (item.HasElement("conditionCodes") ? item.GetElementAsString("conditionCodes").Split(',') : null);
                 var exchangeCodes = (item.HasElement("exchangeCode") ? item.GetElementAsString("exchangeCode").Split(',') : null);
 
@@ -77,7 +76,10 @@ namespace JetBlack.Bloomberg.Managers
             }
 
             if (isPartialResponse)
+            {
+                _tickerMap.Add(message.CorrelationID, ticker);
                 _partial[message.CorrelationID] = tickerIntradayTickData;
+            }
             else
                 asyncHandler.OnSuccess(tickerIntradayTickData);
         }

@@ -6,8 +6,9 @@ using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class HistoricalDataRequestFactory : RequestFactory
+    public class HistoricalDataRequestFactory
     {
+        public ICollection<string> Tickers { get; set; }
         public IList<string> Fields { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
@@ -28,7 +29,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
 
-        public override IEnumerable<Request> CreateRequests(Service refDataService)
+        public IEnumerable<Request> CreateRequests(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.HistoricalDataRequest);
 

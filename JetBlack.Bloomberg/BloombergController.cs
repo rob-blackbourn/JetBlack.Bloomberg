@@ -33,7 +33,7 @@ namespace JetBlack.Bloomberg
         public ReferenceDataManager ReferenceDataManager { get; private set; }
         public HistoricalDataManager HistoricalDataManager { get; private set; }
         public IntradayBarManager IntradayBarManager { get; private set; }
-        public IntraDayTickManager IntraDayTickManager { get; private set; }
+        public IntradayTickManager IntradayTickManager { get; private set; }
 
         public IAuthenticator Authenticator { get; private set; }
 
@@ -49,7 +49,7 @@ namespace JetBlack.Bloomberg
             ReferenceDataManager = new ReferenceDataManager();
             HistoricalDataManager = new HistoricalDataManager();
             IntradayBarManager = new IntradayBarManager();
-            IntraDayTickManager = new IntraDayTickManager();
+            IntradayTickManager = new IntradayTickManager();
         }
 
         public void Start()
@@ -152,12 +152,12 @@ namespace JetBlack.Bloomberg
             return SubscriptionManager.ToObservable(Session, Identity, tickers, fields);
         }
 
-        public IPromise<TickerIntradayTickData> RequestIntradayTick(ICollection<string> tickers, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
+        public IPromise<TickerIntradayTickData> RequestIntradayTick(string ticker, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
         {
             return RequestIntradayTick(
                 new IntradayTickRequestFactory
                 {
-                    Tickers = tickers,
+                    Ticker = ticker,
                     EventTypes = eventTypes,
                     StartDateTime = startDateTime,
                     EndDateTime = endDateTime
@@ -166,7 +166,7 @@ namespace JetBlack.Bloomberg
 
         public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequestFactory request)
         {
-            return IntraDayTickManager.Request(Session, Identity, ReferenceDataService, request);
+            return IntradayTickManager.Request(Session, Identity, ReferenceDataService, request);
             
         }
 
@@ -294,7 +294,7 @@ namespace JetBlack.Bloomberg
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
                     IntradayBarManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    IntraDayTickManager.Process(session, message, isPartialResponse, OnFailure);
+                    IntradayTickManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
                     HistoricalDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))

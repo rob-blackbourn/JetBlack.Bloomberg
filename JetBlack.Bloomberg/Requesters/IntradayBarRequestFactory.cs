@@ -6,8 +6,9 @@ using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class IntradayBarRequestFactory : RequestFactory
+    public class IntradayBarRequestFactory
     {
+        public ICollection<string> Tickers { get; set; }
         public DateTime StartDateTime { get; set; }
         public DateTime EndDateTime { get; set; }
         public EventType EventType { get; set; }
@@ -20,7 +21,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? AdjustmentSplit { get; set; }
         public bool? AdjustmentFollowDPDF { get; set; }
 
-        public override IEnumerable<Request> CreateRequests(Service refDataService)
+        public IEnumerable<Request> CreateRequests(Service refDataService)
         {
             var requests = new List<Request>();
 

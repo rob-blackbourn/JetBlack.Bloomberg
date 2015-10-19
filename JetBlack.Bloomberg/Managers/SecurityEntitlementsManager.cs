@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
@@ -13,8 +12,8 @@ namespace JetBlack.Bloomberg.Managers
     public class SecurityEntitlementsManager
     {
         private readonly IDictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>>();
-        private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new ConcurrentDictionary<CorrelationID, IList<string>>(); 
-        private readonly IDictionary<CorrelationID, IDictionary<string, SecurityEntitlements>> _partials = new ConcurrentDictionary<CorrelationID, IDictionary<string, SecurityEntitlements>>();
+        private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
+        private readonly IDictionary<CorrelationID, IDictionary<string, SecurityEntitlements>> _partials = new Dictionary<CorrelationID, IDictionary<string, SecurityEntitlements>>();
 
         public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(Session session, Service service, Identity identity, IEnumerable<string> tickers)
         {

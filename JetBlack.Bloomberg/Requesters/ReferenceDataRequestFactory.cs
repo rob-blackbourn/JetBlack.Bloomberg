@@ -4,8 +4,9 @@ using JetBlack.Bloomberg.Identifiers;
 
 namespace JetBlack.Bloomberg.Requesters
 {
-    public class ReferenceDataRequestFactory : RequestFactory
+    public class ReferenceDataRequestFactory
     {
+        public ICollection<string> Tickers { get; set; }
         public IEnumerable<string> Fields { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
         public bool? ReturnEids { get; set; }
@@ -13,7 +14,7 @@ namespace JetBlack.Bloomberg.Requesters
         public bool? UseUtcTime { get; set; }
         public bool? ForcedDelay { get; set; }
 
-        public override IEnumerable<Request> CreateRequests(Service refDataService)
+        public IEnumerable<Request> CreateRequests(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.ReferenceDataRequest);
 
