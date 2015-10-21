@@ -1,6 +1,6 @@
 using JetBlack.Monads;
 
-namespace JetBlack.Bloomberg.Managers
+namespace JetBlack.Bloomberg
 {
     public interface ITokenManager
     {

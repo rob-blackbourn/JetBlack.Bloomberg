@@ -9,23 +9,30 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class ServiceManager
+    internal class ServiceManager
     {
+        private readonly Session _session;
+
         private readonly IDictionary<CorrelationID, AsyncPattern<Service>> _openHandlers = new Dictionary<CorrelationID, AsyncPattern<Service>>();
 
-        public Service Open(Session session, string uri)
+        public ServiceManager(Session session)
         {
-            session.OpenService(uri);
-            return session.GetService(uri);
+            _session = session;
         }
 
-        public IPromise<Service> Request(Session session, string uri)
+        public Service Open(string uri)
+        {
+            _session.OpenService(uri);
+            return _session.GetService(uri);
+        }
+
+        public IPromise<Service> Request(string uri)
         {
             return new Promise<Service>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
                 _openHandlers.Add(correlationId, AsyncPattern<Service>.Create(resolve, reject));
-                session.OpenServiceAsync(uri, correlationId);
+                _session.OpenServiceAsync(uri, correlationId);
             });
         }
 

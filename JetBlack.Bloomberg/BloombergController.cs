@@ -27,7 +27,8 @@ namespace JetBlack.Bloomberg
         public Service ReferenceDataService { get; private set; }
 
         private readonly TokenManager _tokenManager;
-        public ServiceManager ServiceManager { get; private set; }
+        private readonly ServiceManager _serviceManager;
+
         public SecurityEntitlementsManager SecurityEntitlementsManager { get; private set; }
         public SubscriptionManager SubscriptionManager { get; private set; }
         public ReferenceDataManager ReferenceDataManager { get; private set; }
@@ -43,7 +44,7 @@ namespace JetBlack.Bloomberg
             Session = new Session(sessionOptions, HandleMessage);
 
             _tokenManager = new TokenManager(Session);
-            ServiceManager = new ServiceManager();
+            _serviceManager = new ServiceManager(Session);
             SecurityEntitlementsManager = new SecurityEntitlementsManager();
             SubscriptionManager = new SubscriptionManager();
             ReferenceDataManager = new ReferenceDataManager();
@@ -78,7 +79,7 @@ namespace JetBlack.Bloomberg
             Identity = Session.CreateIdentity();
             Authenticator = _authenticatorFactory(this);
 
-            ServiceManager.Request(Session, ServiceUris.AuthenticationService)
+            _serviceManager.Request(ServiceUris.AuthenticationService)
                 .Then(service =>
                 {
                     AuthorisationService = service;
@@ -91,13 +92,13 @@ namespace JetBlack.Bloomberg
                 })
                 .ThenAll(() => new[]
                 {
-                    ServiceManager.Request(Session, ServiceUris.ReferenceDataService)
+                    _serviceManager.Request(ServiceUris.ReferenceDataService)
                         .Then(service =>
                         {
                             ReferenceDataService = service;
                             return Promise.Resolved();
                         }),
-                    ServiceManager.Request(Session, ServiceUris.MarketDataService)
+                    _serviceManager.Request(ServiceUris.MarketDataService)
                         .Then(service =>
                         {
                             MarketDataService = service;
@@ -134,12 +135,12 @@ namespace JetBlack.Bloomberg
 
         public Service OpenService(string uri)
         {
-            return ServiceManager.Open(Session, uri);
+            return _serviceManager.Open(uri);
         }
 
         public IPromise<Service> RequestService(string uri)
         {
-            return ServiceManager.Request(Session, uri);
+            return _serviceManager.Request(uri);
         }
 
         public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers)
@@ -238,7 +239,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        eventArgs.GetMessages().ForEach(message => ServiceManager.Process(session, message, OnFailure));
+                        eventArgs.GetMessages().ForEach(message => _serviceManager.Process(session, message, OnFailure));
                         break;
 
                     case Event.EventType.ADMIN:

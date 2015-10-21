@@ -62,7 +62,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Managers\ITokenManager.cs" />
+    <Compile Include="ITokenManager.cs" />
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />
