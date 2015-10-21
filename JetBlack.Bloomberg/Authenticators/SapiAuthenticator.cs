@@ -10,14 +10,13 @@ namespace JetBlack.Bloomberg.Authenticators
         private readonly IPAddress _clientIpAddress;
         private readonly string _uuid;
 
-        public SapiAuthenticator(Identity identity, IPAddress clientIpAddress, string uuid)
-            : base(identity)
+        public SapiAuthenticator(IPAddress clientIpAddress, string uuid)
         {
             _clientIpAddress = clientIpAddress;
             _uuid = uuid;
         }
 
-        public override IPromise<bool> Request(Session session, Service service)
+        public override IPromise<bool> Request(Session session, Service service, Identity identity)
         {
             return new Promise<bool>((resolve, reject) =>
             {
@@ -25,14 +24,14 @@ namespace JetBlack.Bloomberg.Authenticators
                 AuthorizationRequestHandlers.Add(correlationId, AsyncPattern<bool>.Create(resolve, reject));
 
                 var request = CreateRequest(service, _clientIpAddress, _uuid);
-                SendAuthorizationRequest(session, request, correlationId);
+                SendAuthorizationRequest(session, identity, request, correlationId);
             });
         }
 
-        public override bool Authenticate(Session session, Service service)
+        public override bool Authenticate(Session session, Service service, Identity identity)
         {
             var request = CreateRequest(service, _clientIpAddress, _uuid);
-            return Authenticate(session, request);
+            return Authenticate(session, identity, request);
         }
 
         private static Request CreateRequest(Service service, IPAddress clientIpAddress, string uuid)

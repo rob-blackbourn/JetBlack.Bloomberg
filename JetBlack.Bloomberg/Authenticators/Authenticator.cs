@@ -9,23 +9,17 @@ namespace JetBlack.Bloomberg.Authenticators
 {
     public abstract class Authenticator : IAuthenticator
     {
-        private readonly Identity _identity;
         protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
 
-        protected Authenticator(Identity identity)
-        {
-            _identity = identity;
-        }
+        public abstract IPromise<bool> Request(Session session, Service service, Identity identity);
 
-        public abstract IPromise<bool> Request(Session session, Service service);
+        public abstract bool Authenticate(Session session, Service service, Identity identity);
 
-        public abstract bool Authenticate(Session session, Service service);
-
-        protected bool Authenticate(Session session, Request request)
+        protected bool Authenticate(Session session, Identity identity, Request request)
         {
             var correlationId = new CorrelationID();
             var eventQueue = new EventQueue();
-            session.SendAuthorizationRequest(request, _identity, eventQueue, correlationId);
+            session.SendAuthorizationRequest(request, identity, eventQueue, correlationId);
             while (true)
             {
                 var eventArgs = eventQueue.NextEvent();
@@ -43,9 +37,9 @@ namespace JetBlack.Bloomberg.Authenticators
             }
         }
 
-        protected void SendAuthorizationRequest(Session session, Request request, CorrelationID correlationId)
+        protected void SendAuthorizationRequest(Session session, Identity identity, Request request, CorrelationID correlationId)
         {
-            session.SendAuthorizationRequest(request, _identity, correlationId);
+            session.SendAuthorizationRequest(request, identity, correlationId);
         }
 
         public bool IsHandler(CorrelationID correlationId)
@@ -70,11 +64,11 @@ namespace JetBlack.Bloomberg.Authenticators
                 onFailure(session, message, new Exception("Unknown message type: " + message));
         }
 
-        public bool Permits(Element eidData, Service service)
+        public bool Permits(Service service, Identity identity, Element eidData)
         {
             if (eidData == null) return true;
             var missingEntitlements = new List<int>();
-            return _identity.HasEntitlements(eidData, service, missingEntitlements);
+            return identity.HasEntitlements(eidData, service, missingEntitlements);
         }
     }
 }

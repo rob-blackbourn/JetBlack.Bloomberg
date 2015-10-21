@@ -10,18 +10,17 @@ namespace JetBlack.Bloomberg.Authenticators
     {
         private readonly TokenManager _tokenManager;
 
-        public BpipeAuthenticator(Identity identity, TokenManager tokenManager)
-            : base(identity)
+        public BpipeAuthenticator(TokenManager tokenManager)
         {
             _tokenManager = tokenManager;
         }
 
-        public override IPromise<bool> Request(Session session, Service service)
+        public override IPromise<bool> Request(Session session, Service service, Identity identity)
         {
-            return _tokenManager.Request(session).Then(token => Request(session, service, token));
+            return _tokenManager.Request(session).Then(token => Request(session, service, identity, token));
         }
 
-        private IPromise<bool> Request(Session session, Service service, string token)
+        private IPromise<bool> Request(Session session, Service service, Identity identity, string token)
         {
             return new Promise<bool>((resolve, reject) =>
             {
@@ -29,15 +28,15 @@ namespace JetBlack.Bloomberg.Authenticators
                 AuthorizationRequestHandlers.Add(correlationId, AsyncPattern<bool>.Create(resolve, reject));
 
                 var request = CreateRequest(service, token);
-                SendAuthorizationRequest(session, request, correlationId);
+                SendAuthorizationRequest(session, identity, request, correlationId);
             });
         }
 
-        public override bool Authenticate(Session session, Service service)
+        public override bool Authenticate(Session session, Service service, Identity identity)
         {
             var token = _tokenManager.GenerateToken(session);
             var request = CreateRequest(service, token);
-            return Authenticate(session, request);
+            return Authenticate(session, identity, request);
         }
 
         private static Request CreateRequest(Service service, string token)

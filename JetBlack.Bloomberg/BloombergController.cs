@@ -61,7 +61,7 @@ namespace JetBlack.Bloomberg
 
             AuthorisationService = OpenService(ServiceUris.AuthenticationService);
             Authenticator = _authenticatorFactory(this);
-            Authenticator.Authenticate(Session, AuthorisationService);
+            Authenticator.Authenticate(Session, AuthorisationService, Identity);
 
             MarketDataService = OpenService(ServiceUris.MarketDataService);
             ReferenceDataService = OpenService(ServiceUris.ReferenceDataService);
@@ -82,7 +82,7 @@ namespace JetBlack.Bloomberg
                 .Then(service =>
                 {
                     AuthorisationService = service;
-                    return Authenticator.Request(Session, service);
+                    return Authenticator.Request(Session, service, Identity);
                 })
                 .Then(isAuthenticated =>
                 {
