@@ -19,7 +19,18 @@ namespace JetBlack.Bloomberg.Requests
         public bool? IncludeBrokerCodes { get; set; }
         public bool? IncludeRpsCodes { get; set; }
 
-        public Request Create(Service refDataService)
+        public static IntradayTickRequest Create(string ticker, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
+        {
+            return new IntradayTickRequest
+            {
+                Ticker = ticker,
+                EventTypes = eventTypes,
+                StartDateTime = startDateTime,
+                EndDateTime = endDateTime
+            };
+        }
+
+        internal Request ToRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.IntradayTickRequest);
             request.Set(ElementNames.Security, Ticker);

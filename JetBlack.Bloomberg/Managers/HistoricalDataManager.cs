@@ -33,7 +33,7 @@ namespace JetBlack.Bloomberg.Managers
             {
                 var correlationId = new CorrelationID();
                 _asyncHandlers.Add(correlationId, AsyncPattern<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>>.Create(resolve, reject));
-                _session.SendRequest(request.Create(_service), _identity, correlationId);
+                _session.SendRequest(request.ToRequest(_service), _identity, correlationId);
             });
         }
 

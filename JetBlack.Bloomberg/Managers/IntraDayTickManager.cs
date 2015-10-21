@@ -35,7 +35,7 @@ namespace JetBlack.Bloomberg.Managers
                 var correlationId = new CorrelationID();
                 _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayTickData>.Create(resolve, reject));
                 _tickerMap.Add(correlationId, request.Ticker);
-                _session.SendRequest(request.Create(_service), _identity, correlationId);
+                _session.SendRequest(request.ToRequest(_service), _identity, correlationId);
             });
         }
 

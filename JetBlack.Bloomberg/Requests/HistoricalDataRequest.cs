@@ -29,7 +29,22 @@ namespace JetBlack.Bloomberg.Requests
         public bool? CalendarCodeOverride { get; set; }
         public IList<KeyValuePair<string, string>> Overrides { get; set; }
 
-        public Request Create(Service refDataService)
+        public static HistoricalDataRequest Create(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
+        {
+            return new HistoricalDataRequest
+            {
+                Tickers = tickers,
+                Fields = fields,
+                StartDate = startDate,
+                EndDate = endDate,
+                PeriodicitySelection = periodicitySelection,
+                PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
+                NonTradingDayFillOption = Models.NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
+                NonTradingDayFillMethod = Models.NonTradingDayFillMethod.NIL_VALUE,
+            };
+        }
+
+        internal Request ToRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.HistoricalDataRequest);
 

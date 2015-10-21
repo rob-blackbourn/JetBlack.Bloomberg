@@ -14,7 +14,16 @@ namespace JetBlack.Bloomberg.Requests
         public bool? UseUtcTime { get; set; }
         public bool? ForcedDelay { get; set; }
 
-        public Request Create(Service refDataService)
+        public static ReferenceDataRequest Create(ICollection<string> tickers, IEnumerable<string> fields)
+        {
+            return new ReferenceDataRequest
+            {
+                Tickers = tickers,
+                Fields = fields
+            };
+        }
+
+        internal Request ToRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.ReferenceDataRequest);
 

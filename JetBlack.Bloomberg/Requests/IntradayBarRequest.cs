@@ -20,7 +20,19 @@ namespace JetBlack.Bloomberg.Requests
         public bool? AdjustmentSplit { get; set; }
         public bool? AdjustmentFollowDPDF { get; set; }
 
-        public Request Create(Service refDataService)
+        public static IntradayBarRequest Create(string ticker, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
+        {
+            return new IntradayBarRequest
+            {
+                Ticker = ticker,
+                StartDateTime = startDateTime,
+                EndDateTime = endDateTime,
+                EventType = eventType,
+                Interval = interval
+            };
+        }
+
+        internal Request ToRequest(Service refDataService)
         {
             var request = refDataService.CreateRequest(OperationNames.IntradayBarRequest);
 
