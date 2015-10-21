@@ -67,6 +67,7 @@
     <Compile Include="IReferenceDataProvider.cs" />
     <Compile Include="IHistoricalDataProvider.cs" />
     <Compile Include="IIntradayBarProvider.cs" />
+    <Compile Include="IIntradayTickProvider.cs" />
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />

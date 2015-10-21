@@ -11,20 +11,31 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class IntradayTickManager
+    internal class IntradayTickManager : IIntradayTickProvider
     {
+        private readonly Session _session;
+        private readonly Service _service;
+        private readonly Identity _identity; 
+        
         private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>>();
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>(); 
         private readonly IDictionary<CorrelationID, TickerIntradayTickData> _partial = new Dictionary<CorrelationID, TickerIntradayTickData>();
 
-        public IPromise<TickerIntradayTickData> Request(Session session, Identity identity, Service refDataService, IntradayTickRequest request)
+        public IntradayTickManager(Session session, Service service, Identity identity)
+        {
+            _session = session;
+            _service = service;
+            _identity = identity;
+        }
+
+        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequest request)
         {
             return new Promise<TickerIntradayTickData>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
                 _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayTickData>.Create(resolve, reject));
                 _tickerMap.Add(correlationId, request.Ticker);
-                session.SendRequest(request.Create(refDataService), identity, correlationId);
+                _session.SendRequest(request.Create(_service), _identity, correlationId);
             });
         }
 
