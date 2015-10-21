@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ITokenManager.cs" />
+    <Compile Include="ISecurityEntitlementsManager.cs" />
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />

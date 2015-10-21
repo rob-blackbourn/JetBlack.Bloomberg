@@ -9,17 +9,28 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class SecurityEntitlementsManager
+    internal class SecurityEntitlementsManager : ISecurityEntitlementsManager
     {
+        private readonly Session _session;
+        private readonly Service _service;
+        private readonly Identity _identity;
+
         private readonly IDictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>>();
         private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
         private readonly IDictionary<CorrelationID, IDictionary<string, SecurityEntitlements>> _partials = new Dictionary<CorrelationID, IDictionary<string, SecurityEntitlements>>();
 
-        public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(Session session, Service service, Identity identity, IEnumerable<string> tickers)
+        public SecurityEntitlementsManager(Session session, Service service, Identity identity)
+        {
+            _session = session;
+            _service = service;
+            _identity = identity;
+        }
+
+        public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers)
         {
             return new Promise<ICollection<SecurityEntitlements>>((resolve, reject) =>
             {
-                var request = service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
+                var request = _service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
                 var securitiesElement = request.GetElement(ElementNames.Securities);
                 var securities = new List<string>();
                 tickers.ForEach(ticker =>
@@ -32,7 +43,7 @@ namespace JetBlack.Bloomberg.Managers
                 _asyncHandlers.Add(correlationId, new AsyncPattern<ICollection<SecurityEntitlements>>(resolve, reject));
                 _tickerMap.Add(correlationId, securities);
 
-                session.SendRequest(request, identity, correlationId);
+                _session.SendRequest(request, _identity, correlationId);
             });
         }
 

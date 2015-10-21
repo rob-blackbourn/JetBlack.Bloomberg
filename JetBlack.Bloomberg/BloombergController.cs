@@ -12,7 +12,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergController : ITokenManager
+    public class BloombergController : ITokenManager, ISecurityEntitlementsManager
     {
         private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
@@ -29,7 +29,8 @@ namespace JetBlack.Bloomberg
         private readonly TokenManager _tokenManager;
         private readonly ServiceManager _serviceManager;
 
-        public SecurityEntitlementsManager SecurityEntitlementsManager { get; private set; }
+        private SecurityEntitlementsManager _securityEntitlementsManager;
+
         public SubscriptionManager SubscriptionManager { get; private set; }
         public ReferenceDataManager ReferenceDataManager { get; private set; }
         public HistoricalDataManager HistoricalDataManager { get; private set; }
@@ -45,7 +46,6 @@ namespace JetBlack.Bloomberg
 
             _tokenManager = new TokenManager(Session);
             _serviceManager = new ServiceManager(Session);
-            SecurityEntitlementsManager = new SecurityEntitlementsManager();
             SubscriptionManager = new SubscriptionManager();
             ReferenceDataManager = new ReferenceDataManager();
             HistoricalDataManager = new HistoricalDataManager();
@@ -61,6 +61,8 @@ namespace JetBlack.Bloomberg
             Identity = Session.CreateIdentity();
 
             AuthorisationService = OpenService(ServiceUris.AuthenticationService);
+            _securityEntitlementsManager = new SecurityEntitlementsManager(Session, AuthorisationService, Identity);
+
             Authenticator = _authenticatorFactory(this);
             Authenticator.Authenticate(Session, AuthorisationService, Identity);
 
@@ -83,6 +85,7 @@ namespace JetBlack.Bloomberg
                 .Then(service =>
                 {
                     AuthorisationService = service;
+                    _securityEntitlementsManager = new SecurityEntitlementsManager(Session, AuthorisationService, Identity);
                     return Authenticator.Request(Session, service, Identity);
                 })
                 .Then(isAuthenticated =>
@@ -145,7 +148,7 @@ namespace JetBlack.Bloomberg
 
         public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers)
         {
-            return SecurityEntitlementsManager.RequestEntitlements(Session, AuthorisationService, Identity, tickers);
+            return _securityEntitlementsManager.RequestEntitlements(tickers);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
@@ -301,7 +304,7 @@ namespace JetBlack.Bloomberg
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
                     ReferenceDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
-                    SecurityEntitlementsManager.Process(session, message, isPartialResponse, OnFailure);
+                    _securityEntitlementsManager.Process(session, message, isPartialResponse, OnFailure);
             }
         }
 
