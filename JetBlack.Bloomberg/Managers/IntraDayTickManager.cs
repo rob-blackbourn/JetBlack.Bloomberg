@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<IntradayTickResponse> RequestIntradayTick(IntradayTickRequest request)
+        public IPromise<IntradayTickResponse> Request(IntradayTickRequest request)
         {
             return new Promise<IntradayTickResponse>((resolve, reject) =>
             {

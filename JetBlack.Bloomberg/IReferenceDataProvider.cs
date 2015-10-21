@@ -6,6 +6,6 @@ namespace JetBlack.Bloomberg
 {
     public interface IReferenceDataProvider
     {
-        IPromise<ReferenceDataResponse> RequestReferenceData(ReferenceDataRequest request);
+        IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request);
     }
 }

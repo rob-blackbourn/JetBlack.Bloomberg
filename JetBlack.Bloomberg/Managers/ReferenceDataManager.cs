@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<ReferenceDataResponse> RequestReferenceData(ReferenceDataRequest request)
+        public IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request)
         {
             return new Promise<ReferenceDataResponse>((resolve, reject) =>
             {

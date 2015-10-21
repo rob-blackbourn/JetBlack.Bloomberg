@@ -24,7 +24,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<SecurityEntitlementsResponse> RequestSecurityEntitlements(SecurityEntitlementsRequest securityEntitlementsRequest)
+        public IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
             return new Promise<SecurityEntitlementsResponse>((resolve, reject) =>
             {

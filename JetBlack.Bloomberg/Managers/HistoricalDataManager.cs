@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<HistoricalDataResponse> RequestHistoricalData(HistoricalDataRequest request)
+        public IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request)
         {
             return new Promise<HistoricalDataResponse>((resolve, reject) =>
             {

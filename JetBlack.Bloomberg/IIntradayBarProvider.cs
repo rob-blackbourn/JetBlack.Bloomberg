@@ -6,6 +6,6 @@ namespace JetBlack.Bloomberg
 {
     public interface IIntradayBarProvider
     {
-        IPromise<IntradayBarResponse> RequestIntradayBar(IntradayBarRequest request);
+        IPromise<IntradayBarResponse> Request(IntradayBarRequest request);
     }
 }

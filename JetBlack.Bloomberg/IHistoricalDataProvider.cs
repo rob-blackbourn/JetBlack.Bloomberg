@@ -6,6 +6,6 @@ namespace JetBlack.Bloomberg
 {
     public interface IHistoricalDataProvider
     {
-        IPromise<HistoricalDataResponse> RequestHistoricalData(HistoricalDataRequest request);
+        IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request);
     }
 }

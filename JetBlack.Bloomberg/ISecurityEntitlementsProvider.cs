@@ -5,6 +5,6 @@ namespace JetBlack.Bloomberg
 {
     public interface ISecurityEntitlementsProvider
     {
-        IPromise<SecurityEntitlementsResponse> RequestSecurityEntitlements(SecurityEntitlementsRequest securityEntitlementsRequest);
+        IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest);
     }
 }
