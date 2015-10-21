@@ -11,7 +11,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ReferenceDataManager : ResponseManager<ReferenceDataResponse>, IReferenceDataProvider
+    internal class ReferenceDataManager : RequestResponseManager<ReferenceDataRequest, ReferenceDataResponse>, IReferenceDataProvider
     {
         private readonly Service _service;
         private readonly Identity _identity;
@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request)
+        public override IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request)
         {
             return new Promise<ReferenceDataResponse>((resolve, reject) =>
             {
@@ -35,7 +35,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<ReferenceDataResponse> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))

@@ -9,7 +9,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class TokenManager : ResponseManager<string>, ITokenProvider
+    internal class TokenManager : AsyncManager<string>, ITokenProvider
     {
         public TokenManager(Session session)
             : base(session)

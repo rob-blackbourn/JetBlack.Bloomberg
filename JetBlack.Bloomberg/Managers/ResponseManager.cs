@@ -1,16 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using Bloomberglp.Blpapi;
-using JetBlack.Bloomberg.Patterns;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ResponseManager<TResponse> : Manager
+    internal abstract class ResponseManager<TResponse> : AsyncManager<TResponse>
     {
-        protected readonly IDictionary<CorrelationID, AsyncPattern<TResponse>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TResponse>>();
-
-        public ResponseManager(Session session)
+        protected ResponseManager(Session session)
             : base(session)
         {
         }
+
+        public abstract void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure);
     }
 }

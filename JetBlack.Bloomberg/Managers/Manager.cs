@@ -2,11 +2,11 @@
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class Manager
+    internal abstract class Manager
     {
         protected readonly Session Session;
 
-        public Manager(Session session)
+        protected Manager(Session session)
         {
             Session = session;
         }

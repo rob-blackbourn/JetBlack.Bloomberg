@@ -9,7 +9,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class SecurityEntitlementsManager : ResponseManager<SecurityEntitlementsResponse>, ISecurityEntitlementsProvider
+    internal class SecurityEntitlementsManager : RequestResponseManager<SecurityEntitlementsRequest, SecurityEntitlementsResponse>, ISecurityEntitlementsProvider
     {
         private readonly Service _service;
         private readonly Identity _identity;
@@ -24,7 +24,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest)
+        public override IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
             return new Promise<SecurityEntitlementsResponse>((resolve, reject) =>
             {
@@ -45,7 +45,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<SecurityEntitlementsResponse> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))

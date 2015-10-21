@@ -11,7 +11,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class IntradayTickManager : ResponseManager<IntradayTickResponse>, IIntradayTickProvider
+    internal class IntradayTickManager : RequestResponseManager<IntradayTickRequest, IntradayTickResponse>, IIntradayTickProvider
     {
         private readonly Service _service;
         private readonly Identity _identity; 
@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<IntradayTickResponse> Request(IntradayTickRequest request)
+        public override IPromise<IntradayTickResponse> Request(IntradayTickRequest request)
         {
             return new Promise<IntradayTickResponse>((resolve, reject) =>
             {
@@ -37,7 +37,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<IntradayTickResponse> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))

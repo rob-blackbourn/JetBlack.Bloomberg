@@ -11,7 +11,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class HistoricalDataManager : ResponseManager<HistoricalDataResponse>, IHistoricalDataProvider
+    internal class HistoricalDataManager : RequestResponseManager<HistoricalDataRequest, HistoricalDataResponse>, IHistoricalDataProvider
     {
         private readonly Service _service;
         private readonly Identity _identity;
@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request)
+        public override IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request)
         {
             return new Promise<HistoricalDataResponse>((resolve, reject) =>
             {
@@ -35,7 +35,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<HistoricalDataResponse> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))

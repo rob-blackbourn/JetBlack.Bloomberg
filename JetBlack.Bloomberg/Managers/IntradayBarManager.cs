@@ -11,7 +11,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class IntradayBarManager : ResponseManager<IntradayBarResponse>, IIntradayBarProvider
+    internal class IntradayBarManager : RequestResponseManager<IntradayBarRequest, IntradayBarResponse>, IIntradayBarProvider
     {
         private readonly Service _service;
         private readonly Identity _identity;
@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<IntradayBarResponse> Request(IntradayBarRequest request)
+        public override IPromise<IntradayBarResponse> Request(IntradayBarRequest request)
         {
             return new Promise<IntradayBarResponse>((resolve, reject) =>
             {
@@ -37,7 +37,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<IntradayBarResponse> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))

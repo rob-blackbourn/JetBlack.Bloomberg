@@ -8,7 +8,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ServiceManager : ResponseManager<Service>
+    internal class ServiceManager : AsyncManager<Service>
     {
         public ServiceManager(Session session)
             : base(session)
