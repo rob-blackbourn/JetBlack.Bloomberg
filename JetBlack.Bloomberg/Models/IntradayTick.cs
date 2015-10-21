@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace JetBlack.Bloomberg.Models
 {
-    public class IntradayTickData
+    public class IntradayTick
     {
-        public IntradayTickData(DateTime time, EventType eventType, double value, int size, IList<string> conditionCodes, IList<string> exchangeCodes)
+        public IntradayTick(DateTime time, EventType eventType, double value, int size, IList<string> conditionCodes, IList<string> exchangeCodes)
         {
             ExchangeCodes = exchangeCodes;
             ConditionCodes = conditionCodes;

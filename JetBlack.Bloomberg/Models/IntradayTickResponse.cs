@@ -4,7 +4,7 @@ namespace JetBlack.Bloomberg.Models
 {
     public class IntradayTickResponse
     {
-        public IntradayTickResponse(string ticker, IList<IntradayTickData> intraDayTicks, IList<int> entitlementIds)
+        public IntradayTickResponse(string ticker, IList<IntradayTick> intraDayTicks, IList<int> entitlementIds)
         {
             Ticker = ticker;
             IntraDayTicks = intraDayTicks;
@@ -12,7 +12,7 @@ namespace JetBlack.Bloomberg.Models
         }
 
         public string Ticker { get; private set; }
-        public IList<IntradayTickData> IntraDayTicks { get; private set; }
+        public IList<IntradayTick> IntraDayTicks { get; private set; }
         public IList<int> EntitlementIds { get; private set; }
     }
 }

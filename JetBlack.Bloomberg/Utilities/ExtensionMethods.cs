@@ -171,7 +171,7 @@ namespace JetBlack.Bloomberg.Utilities
         }
     }
 
-    public static class KeyValuePair
+    internal static class KeyValuePair
     {
         public static KeyValuePair<TKey, TValue> Create<TKey, TValue>(TKey key, TValue value)
         {
@@ -179,7 +179,7 @@ namespace JetBlack.Bloomberg.Utilities
         }
     }
 
-    public static class EnumerableExtensions
+    internal static class EnumerableExtensions
     {
         public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
         {

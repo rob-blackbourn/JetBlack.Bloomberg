@@ -2,7 +2,7 @@
 
 namespace JetBlack.Bloomberg.Identifiers
 {
-    public static class ElementNames
+    internal static class ElementNames
     {
         public static readonly Name AdjustmentAbnormal = Name.GetName("adjustmentAbnormal");
         public static readonly Name AdjustmentNormal = Name.GetName("adjustmentNormal");

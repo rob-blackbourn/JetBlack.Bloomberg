@@ -1,6 +1,6 @@
 ﻿namespace JetBlack.Bloomberg.Identifiers
 {
-    public static class OperationNames
+    internal static class OperationNames
     {
         public const string HistoricalDataRequest = "HistoricalDataRequest";
         public const string IntradayBarRequest = "IntradayBarRequest";

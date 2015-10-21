@@ -2,7 +2,7 @@
 
 namespace JetBlack.Bloomberg.Identifiers
 {
-    public static class MessageTypeNames
+    internal static class MessageTypeNames
     {
         public static readonly Name AuthorizationFailure = Name.GetName("AuthorizationFailure");
         public static readonly Name AuthorizationSuccess = Name.GetName("AuthorizationSuccess");
