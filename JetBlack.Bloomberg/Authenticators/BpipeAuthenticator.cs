@@ -8,16 +8,16 @@ namespace JetBlack.Bloomberg.Authenticators
 {
     public class BpipeAuthenticator : Authenticator
     {
-        private readonly ITokenManager _tokenManager;
+        private readonly ITokenProvider _tokenProvider;
 
-        public BpipeAuthenticator(ITokenManager tokenManager)
+        public BpipeAuthenticator(ITokenProvider tokenProvider)
         {
-            _tokenManager = tokenManager;
+            _tokenProvider = tokenProvider;
         }
 
         public override IPromise<bool> Request(Session session, Service service, Identity identity)
         {
-            return _tokenManager.RequestToken().Then(token => Request(session, service, identity, token));
+            return _tokenProvider.RequestToken().Then(token => Request(session, service, identity, token));
         }
 
         private IPromise<bool> Request(Session session, Service service, Identity identity, string token)
@@ -34,7 +34,7 @@ namespace JetBlack.Bloomberg.Authenticators
 
         public override bool Authenticate(Session session, Service service, Identity identity)
         {
-            var token = _tokenManager.GenerateToken();
+            var token = _tokenProvider.GenerateToken();
             var request = CreateRequest(service, token);
             return Authenticate(session, identity, request);
         }

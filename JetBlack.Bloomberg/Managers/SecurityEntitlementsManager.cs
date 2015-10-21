@@ -9,7 +9,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class SecurityEntitlementsManager : ISecurityEntitlementsManager
+    internal class SecurityEntitlementsManager : ISecurityEntitlementsProvider
     {
         private readonly Session _session;
         private readonly Service _service;

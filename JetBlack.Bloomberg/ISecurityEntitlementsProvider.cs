@@ -4,7 +4,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public interface ISecurityEntitlementsManager
+    public interface ISecurityEntitlementsProvider
     {
         IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers);
     }

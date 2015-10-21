@@ -2,7 +2,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public interface ITokenManager
+    public interface ITokenProvider
     {
         string GenerateToken();
         IPromise<string> RequestToken();

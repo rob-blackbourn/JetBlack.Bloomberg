@@ -10,7 +10,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class TokenManager : ITokenManager
+    internal class TokenManager : ITokenProvider
     {
         private readonly Session _session;
 

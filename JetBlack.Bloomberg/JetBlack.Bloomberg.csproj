@@ -62,8 +62,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ITokenManager.cs" />
-    <Compile Include="ISecurityEntitlementsManager.cs" />
+    <Compile Include="ITokenProvider.cs" />
+    <Compile Include="ISecurityEntitlementsProvider.cs" />
     <Compile Include="IReferenceDataProvider.cs" />
     <Compile Include="IHistoricalDataProvider.cs" />
     <Compile Include="IIntradayBarProvider.cs" />
