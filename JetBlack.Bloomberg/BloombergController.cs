@@ -156,7 +156,7 @@ namespace JetBlack.Bloomberg
             return _subscriptionManager.ToObservable(tickers, fields);
         }
 
-        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequest request)
+        public IPromise<IntradayTickResponse> RequestIntradayTick(IntradayTickRequest request)
         {
             return _intradayTickManager.RequestIntradayTick(request);
         }
@@ -171,7 +171,7 @@ namespace JetBlack.Bloomberg
             return _historicalDataManager.RequestHistoricalData(request);
         }
 
-        public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequest request)
+        public IPromise<IntradayBarResponse> RequestIntradayBar(IntradayBarRequest request)
         {
             return _intradayBarManager.RequestIntradayBar(request);
         }

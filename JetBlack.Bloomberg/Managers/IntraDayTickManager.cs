@@ -17,9 +17,9 @@ namespace JetBlack.Bloomberg.Managers
         private readonly Service _service;
         private readonly Identity _identity; 
         
-        private readonly IDictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<TickerIntradayTickData>>();
+        private readonly IDictionary<CorrelationID, AsyncPattern<IntradayTickResponse>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IntradayTickResponse>>();
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>(); 
-        private readonly IDictionary<CorrelationID, TickerIntradayTickData> _partial = new Dictionary<CorrelationID, TickerIntradayTickData>();
+        private readonly IDictionary<CorrelationID, IntradayTickResponse> _partial = new Dictionary<CorrelationID, IntradayTickResponse>();
 
         public IntradayTickManager(Session session, Service service, Identity identity)
         {
@@ -28,12 +28,12 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequest request)
+        public IPromise<IntradayTickResponse> RequestIntradayTick(IntradayTickRequest request)
         {
-            return new Promise<TickerIntradayTickData>((resolve, reject) =>
+            return new Promise<IntradayTickResponse>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                _asyncHandlers.Add(correlationId, AsyncPattern<TickerIntradayTickData>.Create(resolve, reject));
+                _asyncHandlers.Add(correlationId, AsyncPattern<IntradayTickResponse>.Create(resolve, reject));
                 _tickerMap.Add(correlationId, request.Ticker);
                 _session.SendRequest(request.ToRequest(_service), _identity, correlationId);
             });
@@ -41,7 +41,7 @@ namespace JetBlack.Bloomberg.Managers
 
         public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<TickerIntradayTickData> asyncHandler;
+            AsyncPattern<IntradayTickResponse> asyncHandler;
             if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
@@ -59,13 +59,13 @@ namespace JetBlack.Bloomberg.Managers
 
             var tickData = message.GetElement("tickData").GetElement("tickData");
 
-            TickerIntradayTickData tickerIntradayTickData;
-            if (_partial.TryGetValue(message.CorrelationID, out tickerIntradayTickData))
+            IntradayTickResponse intradayTickResponse;
+            if (_partial.TryGetValue(message.CorrelationID, out intradayTickResponse))
                 _partial.Remove(message.CorrelationID);
             else
             {
                 var entitlementIds = tickData.HasElement("eidData") ? tickData.GetElement("eidData").ExtractEids() : null;
-                tickerIntradayTickData = new TickerIntradayTickData(ticker, new List<IntradayTickData>(), entitlementIds);
+                intradayTickResponse = new IntradayTickResponse(ticker, new List<IntradayTickData>(), entitlementIds);
             }
 
             for (var i = 0; i < tickData.NumValues; ++i)
@@ -74,7 +74,7 @@ namespace JetBlack.Bloomberg.Managers
                 var conditionCodes = (item.HasElement("conditionCodes") ? item.GetElementAsString("conditionCodes").Split(',') : null);
                 var exchangeCodes = (item.HasElement("exchangeCode") ? item.GetElementAsString("exchangeCode").Split(',') : null);
 
-                tickerIntradayTickData.IntraDayTicks.Add(
+                intradayTickResponse.IntraDayTicks.Add(
                     new IntradayTickData(
                         item.GetElementAsDatetime("time").ToDateTime(),
                         (EventType)Enum.Parse(typeof(EventType), item.GetElementAsString("type"), true),
@@ -87,10 +87,10 @@ namespace JetBlack.Bloomberg.Managers
             if (isPartialResponse)
             {
                 _tickerMap.Add(message.CorrelationID, ticker);
-                _partial[message.CorrelationID] = tickerIntradayTickData;
+                _partial[message.CorrelationID] = intradayTickResponse;
             }
             else
-                asyncHandler.OnSuccess(tickerIntradayTickData);
+                asyncHandler.OnSuccess(intradayTickResponse);
         }
     }
 }

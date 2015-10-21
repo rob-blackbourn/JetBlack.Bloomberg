@@ -94,8 +94,8 @@
     <Compile Include="Models\SecurityError.cs" />
     <Compile Include="Models\SessionDecorator.cs" />
     <Compile Include="Models\TickerData.cs" />
-    <Compile Include="Models\TickerIntradayBarData.cs" />
-    <Compile Include="Models\TickerIntradayTickData.cs" />
+    <Compile Include="Models\IntradayBarResponse.cs" />
+    <Compile Include="Models\IntradayTickResponse.cs" />
     <Compile Include="Models\TickerResponseError.cs" />
     <Compile Include="Models\TickerSecurityError.cs" />
     <Compile Include="Requests\HistoricalDataRequest.cs" />

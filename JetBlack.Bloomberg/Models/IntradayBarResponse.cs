@@ -2,9 +2,9 @@
 
 namespace JetBlack.Bloomberg.Models
 {
-    public class TickerIntradayBarData
+    public class IntradayBarResponse
     {
-        public TickerIntradayBarData(string ticker, IList<IntradayBar> intradayBars, IList<int> entitlementIds)
+        public IntradayBarResponse(string ticker, IList<IntradayBar> intradayBars, IList<int> entitlementIds)
         {
             Ticker = ticker;
             IntradayBars = intradayBars;
