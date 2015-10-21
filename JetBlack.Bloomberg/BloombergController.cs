@@ -12,7 +12,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergController : ITokenManager, ISecurityEntitlementsManager
+    public class BloombergController : ITokenManager, ISecurityEntitlementsManager, IReferenceDataProvider
     {
         private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
@@ -30,9 +30,9 @@ namespace JetBlack.Bloomberg
         private readonly ServiceManager _serviceManager;
 
         private SecurityEntitlementsManager _securityEntitlementsManager;
+        private ReferenceDataManager _referenceDataManager;
 
         public SubscriptionManager SubscriptionManager { get; private set; }
-        public ReferenceDataManager ReferenceDataManager { get; private set; }
         public HistoricalDataManager HistoricalDataManager { get; private set; }
         public IntradayBarManager IntradayBarManager { get; private set; }
         public IntradayTickManager IntradayTickManager { get; private set; }
@@ -47,7 +47,6 @@ namespace JetBlack.Bloomberg
             _tokenManager = new TokenManager(Session);
             _serviceManager = new ServiceManager(Session);
             SubscriptionManager = new SubscriptionManager();
-            ReferenceDataManager = new ReferenceDataManager();
             HistoricalDataManager = new HistoricalDataManager();
             IntradayBarManager = new IntradayBarManager();
             IntradayTickManager = new IntradayTickManager();
@@ -68,6 +67,7 @@ namespace JetBlack.Bloomberg
 
             MarketDataService = OpenService(ServiceUris.MarketDataService);
             ReferenceDataService = OpenService(ServiceUris.ReferenceDataService);
+            _referenceDataManager = new ReferenceDataManager(Session, ReferenceDataService, Identity); 
             RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
         }
 
@@ -99,6 +99,7 @@ namespace JetBlack.Bloomberg
                         .Then(service =>
                         {
                             ReferenceDataService = service;
+                            _referenceDataManager = new ReferenceDataManager(Session, ReferenceDataService, Identity);
                             return Promise.Resolved();
                         }),
                     _serviceManager.Request(ServiceUris.MarketDataService)
@@ -176,7 +177,7 @@ namespace JetBlack.Bloomberg
 
         public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(ReferenceDataRequest request)
         {
-            return ReferenceDataManager.Request(Session, Identity, ReferenceDataService, request);
+            return _referenceDataManager.RequestReferenceData(request);
         }
 
         public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
@@ -302,7 +303,7 @@ namespace JetBlack.Bloomberg
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
                     HistoricalDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    ReferenceDataManager.Process(session, message, isPartialResponse, OnFailure);
+                    _referenceDataManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
                     _securityEntitlementsManager.Process(session, message, isPartialResponse, OnFailure);
             }
