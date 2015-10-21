@@ -12,7 +12,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergController : ITokenManager, ISecurityEntitlementsManager, IReferenceDataProvider, IHistoricalDataProvider, IIntradayBarProvider, IIntradayTickProvider
+    public class BloombergController : ITokenManager, ISecurityEntitlementsManager, IReferenceDataProvider, IHistoricalDataProvider, IIntradayBarProvider, IIntradayTickProvider, ISubscriptionProvider
     {
         private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
@@ -34,8 +34,7 @@ namespace JetBlack.Bloomberg
         private HistoricalDataManager _historicalDataManager;
         private IntradayBarManager _intradayBarManager;
         private IntradayTickManager _intradayTickManager;
-
-        public SubscriptionManager SubscriptionManager { get; private set; }
+        private SubscriptionManager _subscriptionManager;
 
         public IAuthenticator Authenticator { get; private set; }
 
@@ -46,7 +45,6 @@ namespace JetBlack.Bloomberg
 
             _tokenManager = new TokenManager(Session);
             _serviceManager = new ServiceManager(Session);
-            SubscriptionManager = new SubscriptionManager();
         }
 
         public void Start()
@@ -63,6 +61,8 @@ namespace JetBlack.Bloomberg
             Authenticator.Authenticate(Session, AuthorisationService, Identity);
 
             MarketDataService = OpenService(ServiceUris.MarketDataService);
+            _subscriptionManager = new SubscriptionManager(Session, Identity);
+
             ReferenceDataService = OpenService(ServiceUris.ReferenceDataService);
             _referenceDataManager = new ReferenceDataManager(Session, ReferenceDataService, Identity);
             _historicalDataManager = new HistoricalDataManager(Session, ReferenceDataService, Identity);
@@ -110,6 +110,7 @@ namespace JetBlack.Bloomberg
                         .Then(service =>
                         {
                             MarketDataService = service;
+                            _subscriptionManager = new SubscriptionManager(Session, Identity);
                             return Promise.Resolved();
                         })
                 }).Done(() =>
@@ -156,9 +157,9 @@ namespace JetBlack.Bloomberg
             return _securityEntitlementsManager.RequestEntitlements(tickers);
         }
 
-        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IList<string> fields)
+        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
         {
-            return SubscriptionManager.ToObservable(Session, Identity, tickers, fields);
+            return _subscriptionManager.ToObservable(tickers, fields);
         }
 
         public IPromise<TickerIntradayTickData> RequestIntradayTick(string ticker, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
@@ -235,11 +236,11 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        eventArgs.ForEach(message => SubscriptionManager.ProcessSubscriptionData(session, message, false));
+                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message, false));
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:
-                        eventArgs.ForEach(message => SubscriptionManager.ProcessSubscriptionStatus(session, message));
+                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionStatus(session, message));
                         break;
 
                     case Event.EventType.SESSION_STATUS:

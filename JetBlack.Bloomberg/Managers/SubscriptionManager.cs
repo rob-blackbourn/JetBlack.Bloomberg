@@ -11,11 +11,20 @@ using JetBlack.Bloomberg.Utilities;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class SubscriptionManager
+    internal class SubscriptionManager : ISubscriptionProvider
     {
+        private readonly Session _session;
+        private readonly Identity _identity;
+
         private readonly IDictionary<CorrelationID, IObserver<TickerData>> _subscriptions = new Dictionary<CorrelationID, IObserver<TickerData>>();
 
-        public IObservable<TickerData> ToObservable(Session session, Identity identity, IEnumerable<string> tickers, IEnumerable<string> fields)
+        public SubscriptionManager(Session session, Identity identity)
+        {
+            _session = session;
+            _identity = identity;
+        }
+
+        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
         {
             return Observable.Create<TickerData>(observer =>
             {
@@ -28,12 +37,12 @@ namespace JetBlack.Bloomberg.Managers
 
                     subscriptions.Add(new Subscription(ticker, uniqueFields, correlationId));
                 }
-                session.Subscribe(subscriptions, identity);
+                _session.Subscribe(subscriptions, _identity);
 
                 return Disposable.Create(() =>
                 {
                     subscriptions.ForEach(x => _subscriptions.Remove(x.CorrelationID));
-                    session.Unsubscribe(subscriptions);
+                    _session.Unsubscribe(subscriptions);
                 });
             });
         }
