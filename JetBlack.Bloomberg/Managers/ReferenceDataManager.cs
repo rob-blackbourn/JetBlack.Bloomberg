@@ -35,6 +35,11 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
+        public override bool CanProcessResponse(Message message)
+        {
+            return MessageTypeNames.ReferenceDataResponse.Equals(message.MessageType);
+        }
+
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<ReferenceDataResponse> asyncHandler;

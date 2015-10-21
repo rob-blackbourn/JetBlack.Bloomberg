@@ -253,15 +253,15 @@ namespace JetBlack.Bloomberg
             {
                 if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
                     _authenticator.ProcessResponse(session, message, OnFailure);
-                if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
+                if (_intradayBarManager.CanProcessResponse(message))
                     _intradayBarManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
+                else if (_intradayTickManager.CanProcessResponse(message))
                     _intradayTickManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
+                else if (_historicalDataManager.CanProcessResponse(message))
                     _historicalDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
+                else if (_referenceDataManager.CanProcessResponse(message))
                     _referenceDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
+                else if (_securityEntitlementsManager.CanProcessResponse(message))
                     _securityEntitlementsManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
             }
         }

@@ -10,6 +10,8 @@ namespace JetBlack.Bloomberg.Managers
         {
         }
 
+        public abstract bool CanProcessResponse(Message message);
+
         public abstract IPromise<TResponse> Request(TRequest request);
     }
 }
