@@ -166,7 +166,7 @@ namespace JetBlack.Bloomberg
             return _referenceDataManager.RequestReferenceData(request);
         }
 
-        public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequest request)
+        public IPromise<HistoricalDataResponse> RequestHistoricalData(HistoricalDataRequest request)
         {
             return _historicalDataManager.RequestHistoricalData(request);
         }
