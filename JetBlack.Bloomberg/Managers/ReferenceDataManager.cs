@@ -11,18 +11,16 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ReferenceDataManager : IReferenceDataProvider
+    internal class ReferenceDataManager : ResponseManager<ReferenceDataResponse>, IReferenceDataProvider
     {
-        private readonly Session _session;
         private readonly Service _service;
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, AsyncPattern<ReferenceDataResponse>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<ReferenceDataResponse>>();
         private readonly IDictionary<CorrelationID, ReferenceDataResponse> _partial = new Dictionary<CorrelationID, ReferenceDataResponse>();
 
         public ReferenceDataManager(Session session, Service service, Identity identity)
+            : base(session)
         {
-            _session = session;
             _service = service;
             _identity = identity;
         }
@@ -32,15 +30,15 @@ namespace JetBlack.Bloomberg.Managers
             return new Promise<ReferenceDataResponse>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                _asyncHandlers.Add(correlationId, AsyncPattern<ReferenceDataResponse>.Create(resolve, reject));
-                _session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                AsyncHandlers.Add(correlationId, AsyncPattern<ReferenceDataResponse>.Create(resolve, reject));
+                Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
             });
         }
 
-        public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<ReferenceDataResponse> asyncHandler;
-            if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;

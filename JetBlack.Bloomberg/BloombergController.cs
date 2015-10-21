@@ -146,9 +146,9 @@ namespace JetBlack.Bloomberg
             return _serviceManager.Request(uri);
         }
 
-        public IPromise<ICollection<SecurityEntitlements>> RequestSecurityEntitlements(IEnumerable<string> tickers)
+        public IPromise<SecurityEntitlementsResponse> RequestSecurityEntitlements(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
-            return _securityEntitlementsManager.RequestSecurityEntitlements(tickers);
+            return _securityEntitlementsManager.RequestSecurityEntitlements(securityEntitlementsRequest);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
@@ -252,17 +252,17 @@ namespace JetBlack.Bloomberg
             foreach (var message in eventArgs.GetMessages())
             {
                 if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
-                    _authenticator.Process(session, message, OnFailure);
+                    _authenticator.ProcessResponse(session, message, OnFailure);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
-                    _intradayBarManager.Process(session, message, isPartialResponse, OnFailure);
+                    _intradayBarManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
-                    _intradayTickManager.Process(session, message, isPartialResponse, OnFailure);
+                    _intradayTickManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.HistoricalDataResponse))
-                    _historicalDataManager.Process(session, message, isPartialResponse, OnFailure);
+                    _historicalDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.ReferenceDataResponse))
-                    _referenceDataManager.Process(session, message, isPartialResponse, OnFailure);
+                    _referenceDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
                 else if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
-                    _securityEntitlementsManager.Process(session, message, isPartialResponse, OnFailure);
+                    _securityEntitlementsManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
             }
         }
 

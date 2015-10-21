@@ -9,7 +9,7 @@ namespace JetBlack.Bloomberg.Authenticators
 {
     public abstract class Authenticator : IAuthenticator
     {
-        protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AuthorizationRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
+        protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
 
         public abstract IPromise<bool> Request(Session session, Service service, Identity identity);
 
@@ -44,13 +44,13 @@ namespace JetBlack.Bloomberg.Authenticators
 
         public bool IsHandler(CorrelationID correlationId)
         {
-            return AuthorizationRequestHandlers.ContainsKey(correlationId);
+            return AsyncHandlers.ContainsKey(correlationId);
         }
 
-        public void Process(Session session, Message message, Action<Session, Message, Exception> onFailure)
+        public void ProcessResponse(Session session, Message message, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<bool> asyncHandler;
-            if (!AuthorizationRequestHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));
                 return;

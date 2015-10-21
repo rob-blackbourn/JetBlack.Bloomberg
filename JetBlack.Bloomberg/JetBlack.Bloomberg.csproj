@@ -69,12 +69,16 @@
     <Compile Include="IIntradayBarProvider.cs" />
     <Compile Include="IIntradayTickProvider.cs" />
     <Compile Include="ISubscriptionProvider.cs" />
+    <Compile Include="Managers\ResponseManager.cs" />
+    <Compile Include="Managers\Manager.cs" />
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />
     <Compile Include="Models\HistoricalDataResponse.cs" />
     <Compile Include="Models\SecurityEntitlements.cs" />
     <Compile Include="Identifiers\OperationNames.cs" />
+    <Compile Include="Models\SecurityEntitlementsRequest.cs" />
+    <Compile Include="Models\SecurityEntitlementsResponse.cs" />
     <Compile Include="Patterns\AsyncPattern.cs" />
     <Compile Include="Authenticators\AuthenticationMethod.cs" />
     <Compile Include="Authenticators\Authenticator.cs" />

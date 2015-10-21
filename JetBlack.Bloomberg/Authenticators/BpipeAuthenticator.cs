@@ -25,7 +25,7 @@ namespace JetBlack.Bloomberg.Authenticators
             return new Promise<bool>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                AuthorizationRequestHandlers.Add(correlationId, AsyncPattern<bool>.Create(resolve, reject));
+                AsyncHandlers.Add(correlationId, AsyncPattern<bool>.Create(resolve, reject));
 
                 var request = CreateRequest(service, token);
                 SendAuthorizationRequest(session, identity, request, correlationId);

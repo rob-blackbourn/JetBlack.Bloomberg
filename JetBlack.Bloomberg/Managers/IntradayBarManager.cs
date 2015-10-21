@@ -11,19 +11,17 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class IntradayBarManager : IIntradayBarProvider
+    internal class IntradayBarManager : ResponseManager<IntradayBarResponse>, IIntradayBarProvider
     {
-        private readonly Session _session;
         private readonly Service _service;
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, AsyncPattern<IntradayBarResponse>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<IntradayBarResponse>>();
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>();
         private readonly IDictionary<CorrelationID, IntradayBarResponse> _partial = new Dictionary<CorrelationID, IntradayBarResponse>();
 
         public IntradayBarManager(Session session, Service service, Identity identity)
+            : base(session)
         {
-            _session = session;
             _service = service;
             _identity = identity;
         }
@@ -33,16 +31,16 @@ namespace JetBlack.Bloomberg.Managers
             return new Promise<IntradayBarResponse>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
-                _asyncHandlers.Add(correlationId, AsyncPattern<IntradayBarResponse>.Create(resolve, reject));
+                AsyncHandlers.Add(correlationId, AsyncPattern<IntradayBarResponse>.Create(resolve, reject));
                 _tickerMap.Add(correlationId, request.Ticker);
-                _session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
             });
         }
 
-        public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<IntradayBarResponse> asyncHandler;
-            if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;

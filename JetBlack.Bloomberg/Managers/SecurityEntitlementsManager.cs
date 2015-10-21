@@ -9,48 +9,46 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class SecurityEntitlementsManager : ISecurityEntitlementsProvider
+    internal class SecurityEntitlementsManager : ResponseManager<SecurityEntitlementsResponse>, ISecurityEntitlementsProvider
     {
-        private readonly Session _session;
         private readonly Service _service;
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>> _asyncHandlers = new Dictionary<CorrelationID, AsyncPattern<ICollection<SecurityEntitlements>>>();
         private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
-        private readonly IDictionary<CorrelationID, IDictionary<string, SecurityEntitlements>> _partials = new Dictionary<CorrelationID, IDictionary<string, SecurityEntitlements>>();
+        private readonly IDictionary<CorrelationID, SecurityEntitlementsResponse> _partials = new Dictionary<CorrelationID, SecurityEntitlementsResponse>();
 
         public SecurityEntitlementsManager(Session session, Service service, Identity identity)
+            : base(session)
         {
-            _session = session;
             _service = service;
             _identity = identity;
         }
 
-        public IPromise<ICollection<SecurityEntitlements>> RequestSecurityEntitlements(IEnumerable<string> tickers)
+        public IPromise<SecurityEntitlementsResponse> RequestSecurityEntitlements(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
-            return new Promise<ICollection<SecurityEntitlements>>((resolve, reject) =>
+            return new Promise<SecurityEntitlementsResponse>((resolve, reject) =>
             {
                 var request = _service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
                 var securitiesElement = request.GetElement(ElementNames.Securities);
                 var securities = new List<string>();
-                tickers.ForEach(ticker =>
+                securityEntitlementsRequest.Tickers.ForEach(ticker =>
                 {
                     securitiesElement.AppendValue(ticker);
                     securities.Add(ticker);
                 });
 
                 var correlationId = new CorrelationID();
-                _asyncHandlers.Add(correlationId, new AsyncPattern<ICollection<SecurityEntitlements>>(resolve, reject));
+                AsyncHandlers.Add(correlationId, new AsyncPattern<SecurityEntitlementsResponse>(resolve, reject));
                 _tickerMap.Add(correlationId, securities);
 
-                _session.SendRequest(request, _identity, correlationId);
+                Session.SendRequest(request, _identity, correlationId);
             });
         }
 
-        public void Process(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
+        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<ICollection<SecurityEntitlements>> asyncHandler;
-            if (!_asyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            AsyncPattern<SecurityEntitlementsResponse> asyncHandler;
+            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));
                 return;
@@ -59,11 +57,11 @@ namespace JetBlack.Bloomberg.Managers
             var tickers = _tickerMap[message.CorrelationID];
             _tickerMap.Remove(message.CorrelationID);
 
-            IDictionary<string, SecurityEntitlements> securityEntitlementsMap;
-            if (_partials.TryGetValue(message.CorrelationID, out securityEntitlementsMap))
+            SecurityEntitlementsResponse securityEntitlementsResponse;
+            if (_partials.TryGetValue(message.CorrelationID, out securityEntitlementsResponse))
                 _partials.Remove(message.CorrelationID);
             else
-                securityEntitlementsMap = new Dictionary<string, SecurityEntitlements>();
+                securityEntitlementsResponse = new SecurityEntitlementsResponse(new Dictionary<string, SecurityEntitlements>());
 
             if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
             {
@@ -74,8 +72,8 @@ namespace JetBlack.Bloomberg.Managers
                     var eidDataElement = eidDataArrayElement.GetValueAsElement(i);
 
                     SecurityEntitlements securityEntitlements;
-                    if (securityEntitlementsMap.TryGetValue(ticker, out securityEntitlements))
-                        securityEntitlementsMap.Remove(ticker);
+                    if (securityEntitlementsResponse.SecurityEntitlements.TryGetValue(ticker, out securityEntitlements))
+                        securityEntitlementsResponse.SecurityEntitlements.Remove(ticker);
                     else
                     {
                         var status = eidDataElement.GetElementAsInt32("status");
@@ -89,9 +87,9 @@ namespace JetBlack.Bloomberg.Managers
                 }
 
                 if (isPartialResponse)
-                    _partials[message.CorrelationID] = securityEntitlementsMap;
+                    _partials[message.CorrelationID] = securityEntitlementsResponse;
                 else
-                    asyncHandler.OnSuccess(securityEntitlementsMap.Values);
+                    asyncHandler.OnSuccess(securityEntitlementsResponse);
             }
             else
                 onFailure(session, message, new Exception("Unknown message type: " + message));
