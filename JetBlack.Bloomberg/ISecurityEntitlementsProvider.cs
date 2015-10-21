@@ -6,6 +6,6 @@ namespace JetBlack.Bloomberg
 {
     public interface ISecurityEntitlementsProvider
     {
-        IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers);
+        IPromise<ICollection<SecurityEntitlements>> RequestSecurityEntitlements(IEnumerable<string> tickers);
     }
 }

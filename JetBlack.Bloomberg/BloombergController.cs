@@ -14,80 +14,78 @@ namespace JetBlack.Bloomberg
 {
     public class BloombergController : ITokenProvider, ISecurityEntitlementsProvider, IReferenceDataProvider, IHistoricalDataProvider, IIntradayBarProvider, IIntradayTickProvider, ISubscriptionProvider
     {
-        private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
         public event EventHandler<EventArgs<AdminStatus>> AdminStatus;
         public event EventHandler<EventArgs<bool>> AuthenticationStatus;
         public event EventHandler<EventArgs<bool>> InitialisationStatus;
 
-        public Session Session { get; private set; }
-        public Identity Identity { get; private set; }
-        public Service AuthorisationService { get; private set; }
-        public Service MarketDataService { get; private set; }
-        public Service ReferenceDataService { get; private set; }
-
+        private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
+        private readonly Session _session;
         private readonly TokenManager _tokenManager;
         private readonly ServiceManager _serviceManager;
 
+        private Identity _identity;
+        private Service _authorisationService;
+        private Service _marketDataService;
+        private Service _referenceDataService;
         private SecurityEntitlementsManager _securityEntitlementsManager;
         private ReferenceDataManager _referenceDataManager;
         private HistoricalDataManager _historicalDataManager;
         private IntradayBarManager _intradayBarManager;
         private IntradayTickManager _intradayTickManager;
         private SubscriptionManager _subscriptionManager;
-
-        public IAuthenticator Authenticator { get; private set; }
+        private IAuthenticator _authenticator;
 
         public BloombergController(SessionOptions sessionOptions, Func<BloombergController, IAuthenticator> authenticatorFactory)
         {
             _authenticatorFactory = authenticatorFactory;
-            Session = new Session(sessionOptions, HandleMessage);
+            _session = new Session(sessionOptions, HandleMessage);
 
-            _tokenManager = new TokenManager(Session);
-            _serviceManager = new ServiceManager(Session);
+            _tokenManager = new TokenManager(_session);
+            _serviceManager = new ServiceManager(_session);
         }
 
         public void Start()
         {
-            if (!Session.Start())
+            if (!_session.Start())
                 throw new Exception("Failed to start session");
 
-            Identity = Session.CreateIdentity();
+            _identity = _session.CreateIdentity();
 
-            AuthorisationService = OpenService(ServiceUris.AuthenticationService);
-            _securityEntitlementsManager = new SecurityEntitlementsManager(Session, AuthorisationService, Identity);
+            _authorisationService = OpenService(ServiceUris.AuthenticationService);
+            _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
 
-            Authenticator = _authenticatorFactory(this);
-            Authenticator.Authenticate(Session, AuthorisationService, Identity);
+            _authenticator = _authenticatorFactory(this);
+            _authenticator.Authenticate(_session, _authorisationService, _identity);
 
-            MarketDataService = OpenService(ServiceUris.MarketDataService);
-            _subscriptionManager = new SubscriptionManager(Session, Identity);
+            _marketDataService = OpenService(ServiceUris.MarketDataService);
+            _subscriptionManager = new SubscriptionManager(_session, _identity);
 
-            ReferenceDataService = OpenService(ServiceUris.ReferenceDataService);
-            _referenceDataManager = new ReferenceDataManager(Session, ReferenceDataService, Identity);
-            _historicalDataManager = new HistoricalDataManager(Session, ReferenceDataService, Identity);
-            _intradayBarManager = new IntradayBarManager(Session, ReferenceDataService, Identity);
-            _intradayTickManager = new IntradayTickManager(Session, ReferenceDataService, Identity);
+            _referenceDataService = OpenService(ServiceUris.ReferenceDataService);
+            _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
+            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
+            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
+            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
 
             RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
         }
 
         public void StartAsync()
         {
-            Session.StartAsync();
+            _session.StartAsync();
         }
 
         public void AuthenticateAsync()
         {
-            Identity = Session.CreateIdentity();
-            Authenticator = _authenticatorFactory(this);
+            _identity = _session.CreateIdentity();
+            _authenticator = _authenticatorFactory(this);
 
             _serviceManager.Request(ServiceUris.AuthenticationService)
                 .Then(service =>
                 {
-                    AuthorisationService = service;
-                    _securityEntitlementsManager = new SecurityEntitlementsManager(Session, AuthorisationService, Identity);
-                    return Authenticator.Request(Session, service, Identity);
+                    _authorisationService = service;
+                    _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
+                    return _authenticator.Request(_session, service, _identity);
                 })
                 .Then(isAuthenticated =>
                 {
@@ -99,37 +97,33 @@ namespace JetBlack.Bloomberg
                     _serviceManager.Request(ServiceUris.ReferenceDataService)
                         .Then(service =>
                         {
-                            ReferenceDataService = service;
-                            _referenceDataManager = new ReferenceDataManager(Session, ReferenceDataService, Identity);
-                            _historicalDataManager = new HistoricalDataManager(Session, ReferenceDataService, Identity);
-                            _intradayBarManager = new IntradayBarManager(Session, ReferenceDataService, Identity);
-                            _intradayTickManager = new IntradayTickManager(Session, ReferenceDataService, Identity);
+                            _referenceDataService = service;
+                            _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
+                            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
+                            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
+                            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
                             return Promise.Resolved();
                         }),
                     _serviceManager.Request(ServiceUris.MarketDataService)
                         .Then(service =>
                         {
-                            MarketDataService = service;
-                            _subscriptionManager = new SubscriptionManager(Session, Identity);
+                            _marketDataService = service;
+                            _subscriptionManager = new SubscriptionManager(_session, _identity);
                             return Promise.Resolved();
                         })
-                }).Done(() =>
-                {
-                    RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
-                }, _ =>
-                {
-                    RaiseEvent(InitialisationStatus, new EventArgs<bool>(false));
-                });
+                }).Done(
+                    () => RaiseEvent(InitialisationStatus, new EventArgs<bool>(true)),
+                    _ => RaiseEvent(InitialisationStatus, new EventArgs<bool>(false)));
         }
 
         public void Stop()
         {
-            Session.Stop(AbstractSession.StopOption.SYNC);
+            _session.Stop(AbstractSession.StopOption.SYNC);
         }
 
         public void StopAsync()
         {
-            Session.Stop(AbstractSession.StopOption.ASYNC);
+            _session.Stop(AbstractSession.StopOption.ASYNC);
         }
 
         public string GenerateToken()
@@ -152,26 +146,14 @@ namespace JetBlack.Bloomberg
             return _serviceManager.Request(uri);
         }
 
-        public IPromise<ICollection<SecurityEntitlements>> RequestEntitlements(IEnumerable<string> tickers)
+        public IPromise<ICollection<SecurityEntitlements>> RequestSecurityEntitlements(IEnumerable<string> tickers)
         {
-            return _securityEntitlementsManager.RequestEntitlements(tickers);
+            return _securityEntitlementsManager.RequestSecurityEntitlements(tickers);
         }
 
         public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
         {
             return _subscriptionManager.ToObservable(tickers, fields);
-        }
-
-        public IPromise<TickerIntradayTickData> RequestIntradayTick(string ticker, IEnumerable<EventType> eventTypes, DateTime startDateTime, DateTime endDateTime)
-        {
-            return RequestIntradayTick(
-                new IntradayTickRequest
-                {
-                    Ticker = ticker,
-                    EventTypes = eventTypes,
-                    StartDateTime = startDateTime,
-                    EndDateTime = endDateTime
-                });
         }
 
         public IPromise<TickerIntradayTickData> RequestIntradayTick(IntradayTickRequest request)
@@ -185,38 +167,9 @@ namespace JetBlack.Bloomberg
             return _referenceDataManager.RequestReferenceData(request);
         }
 
-        public IPromise<IDictionary<string, IDictionary<DateTime, IDictionary<string, object>>>> RequestHistoricalData(ICollection<string> tickers, IList<string> fields, DateTime startDate, DateTime endDate, PeriodicitySelection periodicitySelection)
-        {
-            return RequestHistoricalData(
-                new HistoricalDataRequest
-                {
-                    Tickers = tickers,
-                    Fields = fields,
-                    StartDate = startDate,
-                    EndDate = endDate,
-                    PeriodicitySelection = periodicitySelection,
-                    PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
-                    NonTradingDayFillOption = NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
-                    NonTradingDayFillMethod = NonTradingDayFillMethod.NIL_VALUE,
-                });
-        }
-
         public IPromise<IDictionary<string,IDictionary<DateTime,IDictionary<string,object>>>> RequestHistoricalData(HistoricalDataRequest request)
         {
             return _historicalDataManager.RequestHistoricalData(request);
-        }
-
-        public IPromise<TickerIntradayBarData> RequestIntradayBar(string ticker, DateTime startDateTime, DateTime endDateTime, EventType eventType, int interval)
-        {
-            return RequestIntradayBar(
-                new IntradayBarRequest
-                {
-                    Ticker = ticker,
-                    StartDateTime = startDateTime,
-                    EndDateTime = endDateTime,
-                    EventType = eventType,
-                    Interval = interval
-                });
         }
 
         public IPromise<TickerIntradayBarData> RequestIntradayBar(IntradayBarRequest request)
@@ -300,7 +253,7 @@ namespace JetBlack.Bloomberg
             foreach (var message in eventArgs.GetMessages())
             {
                 if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
-                    Authenticator.Process(session, message, OnFailure);
+                    _authenticator.Process(session, message, OnFailure);
                 if (message.MessageType.Equals(MessageTypeNames.IntradayBarResponse))
                     _intradayBarManager.Process(session, message, isPartialResponse, OnFailure);
                 else if (message.MessageType.Equals(MessageTypeNames.IntradayTickResponse))
