@@ -75,7 +75,7 @@ namespace JetBlack.Bloomberg.Managers
                 if (historicalTickerDataMap.HistoricalTickerData.TryGetValue(ticker, out historicalTickerData))
                     historicalTickerDataMap.HistoricalTickerData.Remove(ticker);
                 else
-                    historicalTickerData = new HistoricalTickerData(ticker, new Dictionary<DateTime, IDictionary<string, object>>());
+                    historicalTickerData = new HistoricalTickerData(ticker, new List<KeyValuePair<DateTime, IDictionary<string, object>>>());
 
                 var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
 
@@ -99,7 +99,7 @@ namespace JetBlack.Bloomberg.Managers
                     {
                         var date = (DateTime)data["date"];
                         data.Remove("date");
-                        historicalTickerData.Data.Add(date, data);
+                        historicalTickerData.Data.Add(new KeyValuePair<DateTime, IDictionary<string, object>>(date, data));
                     }
                 }
 
