@@ -12,7 +12,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergController
+    public class BloombergController : ITokenManager
     {
         private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
@@ -26,7 +26,7 @@ namespace JetBlack.Bloomberg
         public Service MarketDataService { get; private set; }
         public Service ReferenceDataService { get; private set; }
 
-        public TokenManager TokenManager { get; private set; }
+        private readonly TokenManager _tokenManager;
         public ServiceManager ServiceManager { get; private set; }
         public SecurityEntitlementsManager SecurityEntitlementsManager { get; private set; }
         public SubscriptionManager SubscriptionManager { get; private set; }
@@ -42,7 +42,7 @@ namespace JetBlack.Bloomberg
             _authenticatorFactory = authenticatorFactory;
             Session = new Session(sessionOptions, HandleMessage);
 
-            TokenManager = new TokenManager();
+            _tokenManager = new TokenManager(Session);
             ServiceManager = new ServiceManager();
             SecurityEntitlementsManager = new SecurityEntitlementsManager();
             SubscriptionManager = new SubscriptionManager();
@@ -124,12 +124,12 @@ namespace JetBlack.Bloomberg
 
         public string GenerateToken()
         {
-            return TokenManager.GenerateToken(Session);
+            return _tokenManager.GenerateToken();
         }
 
         public IPromise<string> RequestToken()
         {
-            return TokenManager.Request(Session);
+            return _tokenManager.RequestToken();
         }
 
         public Service OpenService(string uri)
@@ -246,7 +246,7 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.TOKEN_STATUS:
-                        eventArgs.GetMessages().ForEach(message => TokenManager.ProcessTokenStatusEvent(session, message, OnFailure));
+                        eventArgs.GetMessages().ForEach(message => _tokenManager.ProcessTokenStatusEvent(session, message, OnFailure));
                         break;
 
                 }

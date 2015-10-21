@@ -10,15 +10,22 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    public class TokenManager
+    internal class TokenManager : ITokenManager
     {
+        private readonly Session _session;
+
         private readonly IDictionary<CorrelationID, AsyncPattern<string>> _tokenRequestHandlers = new Dictionary<CorrelationID, AsyncPattern<string>>();
 
-        public string GenerateToken(Session session)
+        public TokenManager(Session session)
+        {
+            _session = session;
+        }
+
+        public string GenerateToken()
         {
             var correlationId = new CorrelationID();
             var eventQueue = new EventQueue();
-            session.GenerateToken(correlationId, eventQueue);
+            _session.GenerateToken(correlationId, eventQueue);
             var eventArgs = eventQueue.NextEvent();
             foreach (var message in eventArgs.GetMessages())
             {
@@ -30,13 +37,13 @@ namespace JetBlack.Bloomberg.Managers
             throw new Exception("Token service failure.");
         }
 
-        public IPromise<string> Request(Session session)
+        public IPromise<string> RequestToken()
         {
             return new Promise<string>((resolve, reject) =>
             {
                 var correlationId = new CorrelationID();
                 _tokenRequestHandlers.Add(correlationId, AsyncPattern<string>.Create(resolve, reject));
-                session.GenerateToken(correlationId);
+                _session.GenerateToken(correlationId);
             });
         }
 
