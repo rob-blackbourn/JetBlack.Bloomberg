@@ -4,13 +4,11 @@ namespace JetBlack.Bloomberg.Models
 {
     public class ReferenceDataResponse
     {
-        public ReferenceDataResponse(IList<TickerData> referenceData, bool isPartialResponse)
+        public ReferenceDataResponse(IDictionary<string,TickerData> referenceData)
         {
             ReferenceData = referenceData;
-            IsPartialResponse = isPartialResponse;
         }
 
-        public IList<TickerData> ReferenceData { get; private set; }
-        public bool IsPartialResponse { get; private set; }
+        public IDictionary<string,TickerData> ReferenceData { get; private set; }
     }
 }

@@ -53,7 +53,7 @@ namespace JetBlack.Bloomberg.Managers
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 
-            observer.OnNext(new TickerData(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue()), isPartialResponse));
+            observer.OnNext(new TickerData(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue())));
         }
 
         public void ProcessSubscriptionStatus(Session session, Message message)

@@ -161,7 +161,7 @@ namespace JetBlack.Bloomberg
             return _intradayTickManager.RequestIntradayTick(request);
         }
 
-        public IPromise<IDictionary<string,IDictionary<string,object>>> RequestReferenceData(ReferenceDataRequest request)
+        public IPromise<ReferenceDataResponse> RequestReferenceData(ReferenceDataRequest request)
         {
             return _referenceDataManager.RequestReferenceData(request);
         }

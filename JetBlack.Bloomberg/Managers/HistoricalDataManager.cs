@@ -52,11 +52,11 @@ namespace JetBlack.Bloomberg.Managers
                 return;
             }
 
-            HistoricalDataResponse historicalTickerDataMap;
-            if (_partial.TryGetValue(message.CorrelationID, out historicalTickerDataMap))
+            HistoricalDataResponse historicalDataResponse;
+            if (_partial.TryGetValue(message.CorrelationID, out historicalDataResponse))
                 _partial.Remove(message.CorrelationID);
             else
-                historicalTickerDataMap = new HistoricalDataResponse(new Dictionary<string,HistoricalTickerData>());
+                historicalDataResponse = new HistoricalDataResponse(new Dictionary<string,HistoricalTickerData>());
 
             var securityDataArray = message.GetElement(ElementNames.SecurityData);
 
@@ -72,8 +72,8 @@ namespace JetBlack.Bloomberg.Managers
                 }
 
                 HistoricalTickerData historicalTickerData;
-                if (historicalTickerDataMap.HistoricalTickerData.TryGetValue(ticker, out historicalTickerData))
-                    historicalTickerDataMap.HistoricalTickerData.Remove(ticker);
+                if (historicalDataResponse.HistoricalTickerData.TryGetValue(ticker, out historicalTickerData))
+                    historicalDataResponse.HistoricalTickerData.Remove(ticker);
                 else
                     historicalTickerData = new HistoricalTickerData(ticker, new List<KeyValuePair<DateTime, IDictionary<string, object>>>());
 
@@ -103,13 +103,13 @@ namespace JetBlack.Bloomberg.Managers
                     }
                 }
 
-                historicalTickerDataMap.HistoricalTickerData[ticker] = historicalTickerData;
+                historicalDataResponse.HistoricalTickerData[ticker] = historicalTickerData;
             }
 
             if (isPartialResponse)
-                _partial[message.CorrelationID] = historicalTickerDataMap;
+                _partial[message.CorrelationID] = historicalDataResponse;
             else
-                asyncHandler.OnSuccess(historicalTickerDataMap);
+                asyncHandler.OnSuccess(historicalDataResponse);
         }
     }
 }
