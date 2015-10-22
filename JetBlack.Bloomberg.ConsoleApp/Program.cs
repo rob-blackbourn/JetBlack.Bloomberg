@@ -20,9 +20,9 @@ namespace JetBlack.Bloomberg.ConsoleApp
         {
             var sessionOptions = new SessionOptions
             {
-                ServerHost = "69.184.252.8",
-                ServerPort = 8194,
-                AuthenticationOptions = "AuthenticationMode=APPLICATION_ONLY;ApplicationAuthenticationType=APPNAME_AND_KEY;ApplicationName=GLG:BLPFeedService.AtlasMacro",
+                ServerHost = "192.168.0.1", // Your server ip address
+                ServerPort = 8194, // Your server port
+                AuthenticationOptions = "AuthenticationMode=APPLICATION_ONLY;ApplicationAuthenticationType=APPNAME_AND_KEY;ApplicationName=XXXXXX", // Your server name
                 AutoRestartOnDisconnection = true
             };
 
