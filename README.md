@@ -47,8 +47,11 @@ two techniques: Observables, and Promises.
 The ticking data is provided through an observable:
 
 ```cs
-_bloomberg.ToObservable(new[] { "IBM US Equity" }, new[] { "BID", "ASK" })
+var disposable = _bloomberg.ToObservable(new[] { "IBM US Equity" }, new[] { "BID", "ASK" })
     .Subscribe(tickerData => Console.WriteLine("{0} - [{1}]", tickerData.Ticker, string.Join(",", tickerData.Data.Select(x => string.Format("{0}: {1}", x.Key, x.Value)))));
+
+// ... to unsubscribe at some point later.
+disposable.Dispose();
 ```
 
 The "one-off" data is provided through a promise:
