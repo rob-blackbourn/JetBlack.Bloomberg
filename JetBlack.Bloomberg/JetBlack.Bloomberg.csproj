@@ -70,6 +70,7 @@
     <Compile Include="IIntradayTickProvider.cs" />
     <Compile Include="ISubscriptionProvider.cs" />
     <Compile Include="Managers\AsyncManager.cs" />
+    <Compile Include="Managers\IResponseProcessor.cs" />
     <Compile Include="Managers\RequestResponseManager.cs" />
     <Compile Include="Managers\ResponseManager.cs" />
     <Compile Include="Managers\Manager.cs" />

@@ -3,7 +3,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal abstract class RequestResponseManager<TRequest, TResponse> : ResponseManager<TResponse>
+    internal abstract class RequestResponseManager<TRequest, TResponse> : ResponseManager<TResponse>, IResponseProcessor
     {
         protected RequestResponseManager(Session session)
             : base(session)

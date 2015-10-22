@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
+using JetBlack.Bloomberg.Managers;
 using JetBlack.Bloomberg.Patterns;
 using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Authenticators
 {
-    public abstract class Authenticator : IAuthenticator
+    public abstract class Authenticator : IAuthenticator, IResponseProcessor
     {
         protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
 
@@ -47,7 +48,19 @@ namespace JetBlack.Bloomberg.Authenticators
             return AsyncHandlers.ContainsKey(correlationId);
         }
 
-        public void ProcessResponse(Session session, Message message, Action<Session, Message, Exception> onFailure)
+        public bool Permits(Service service, Identity identity, Element eidData)
+        {
+            if (eidData == null) return true;
+            var missingEntitlements = new List<int>();
+            return identity.HasEntitlements(eidData, service, missingEntitlements);
+        }
+
+        public bool CanProcessResponse(Message message)
+        {
+            return MessageTypeNames.AuthorizationFailure.Equals(message.MessageType) || MessageTypeNames.AuthorizationSuccess.Equals(message.MessageType);
+        }
+
+        public void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             AsyncPattern<bool> asyncHandler;
             if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
@@ -62,13 +75,6 @@ namespace JetBlack.Bloomberg.Authenticators
                 asyncHandler.OnSuccess(true);
             else
                 onFailure(session, message, new Exception("Unknown message type: " + message));
-        }
-
-        public bool Permits(Service service, Identity identity, Element eidData)
-        {
-            if (eidData == null) return true;
-            var missingEntitlements = new List<int>();
-            return identity.HasEntitlements(eidData, service, missingEntitlements);
         }
     }
 }

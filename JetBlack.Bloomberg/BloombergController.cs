@@ -23,6 +23,7 @@ namespace JetBlack.Bloomberg
         private readonly Session _session;
         private readonly TokenManager _tokenManager;
         private readonly ServiceManager _serviceManager;
+        private readonly IList<IResponseProcessor> _responseProcessors = new List<IResponseProcessor>();
 
         private Identity _identity;
         private Service _authorisationService;
@@ -62,12 +63,22 @@ namespace JetBlack.Bloomberg
             _subscriptionManager = new SubscriptionManager(_session, _identity);
 
             _referenceDataService = OpenService(ServiceUris.ReferenceDataService);
+            AddReferenceDataManagers();
+
+            RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
+        }
+
+        private void AddReferenceDataManagers()
+        {
             _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
             _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
             _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
             _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
 
-            RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
+            _responseProcessors.Add(_referenceDataManager);
+            _responseProcessors.Add(_historicalDataManager);
+            _responseProcessors.Add(_intradayBarManager);
+            _responseProcessors.Add(_intradayTickManager);
         }
 
         public void StartAsync()
@@ -98,10 +109,7 @@ namespace JetBlack.Bloomberg
                         .Then(service =>
                         {
                             _referenceDataService = service;
-                            _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
-                            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
-                            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
-                            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
+                            AddReferenceDataManagers();
                             return Promise.Resolved();
                         }),
                     _serviceManager.Request(ServiceUris.MarketDataService)
@@ -251,18 +259,19 @@ namespace JetBlack.Bloomberg
 
             foreach (var message in eventArgs.GetMessages())
             {
-                if (message.MessageType.Equals(MessageTypeNames.AuthorizationFailure) || message.MessageType.Equals(MessageTypeNames.AuthorizationSuccess))
-                    _authenticator.ProcessResponse(session, message, OnFailure);
-                if (_intradayBarManager.CanProcessResponse(message))
-                    _intradayBarManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (_intradayTickManager.CanProcessResponse(message))
-                    _intradayTickManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (_historicalDataManager.CanProcessResponse(message))
-                    _historicalDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (_referenceDataManager.CanProcessResponse(message))
-                    _referenceDataManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else if (_securityEntitlementsManager.CanProcessResponse(message))
-                    _securityEntitlementsManager.ProcessResponse(session, message, isPartialResponse, OnFailure);
+                if (_authenticator.CanProcessResponse(message))
+                    _authenticator.ProcessResponse(session, message, isPartialResponse, OnFailure);
+                else
+                {
+                    foreach (var processor in _responseProcessors)
+                    {
+                        if (processor.CanProcessResponse(message))
+                        {
+                            processor.ProcessResponse(session, message, isPartialResponse, OnFailure);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
