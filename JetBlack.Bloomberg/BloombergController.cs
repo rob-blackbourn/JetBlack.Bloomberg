@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Authenticators;
 using JetBlack.Bloomberg.Identifiers;
@@ -19,11 +21,11 @@ namespace JetBlack.Bloomberg
         public event EventHandler<EventArgs<bool>> AuthenticationStatus;
         public event EventHandler<EventArgs<bool>> InitialisationStatus;
 
-        private readonly Func<BloombergController, IAuthenticator> _authenticatorFactory;
+        private readonly Func<BloombergController, Authenticator> _authenticatorFactory;
         private readonly Session _session;
         private readonly TokenManager _tokenManager;
         private readonly ServiceManager _serviceManager;
-        private readonly IList<IResponseProcessor> _responseProcessors = new List<IResponseProcessor>();
+        private readonly ConcurrentBag<IResponseProcessor> _responseProcessors = new ConcurrentBag<IResponseProcessor>();
 
         private Identity _identity;
         private Service _authorisationService;
@@ -35,9 +37,9 @@ namespace JetBlack.Bloomberg
         private IntradayBarManager _intradayBarManager;
         private IntradayTickManager _intradayTickManager;
         private SubscriptionManager _subscriptionManager;
-        private IAuthenticator _authenticator;
+        private Authenticator _authenticator;
 
-        public BloombergController(SessionOptions sessionOptions, Func<BloombergController, IAuthenticator> authenticatorFactory)
+        public BloombergController(SessionOptions sessionOptions, Func<BloombergController, Authenticator> authenticatorFactory)
         {
             _authenticatorFactory = authenticatorFactory;
             _session = new Session(sessionOptions, HandleMessage);
@@ -54,31 +56,30 @@ namespace JetBlack.Bloomberg
             _identity = _session.CreateIdentity();
 
             _authorisationService = OpenService(ServiceUris.AuthenticationService);
+
             _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
+            _responseProcessors.Add(_securityEntitlementsManager);
 
             _authenticator = _authenticatorFactory(this);
+            _responseProcessors.Add(_authenticator);
+
             _authenticator.Authenticate(_session, _authorisationService, _identity);
 
             _marketDataService = OpenService(ServiceUris.MarketDataService);
             _subscriptionManager = new SubscriptionManager(_session, _identity);
 
             _referenceDataService = OpenService(ServiceUris.ReferenceDataService);
-            AddReferenceDataManagers();
+
+            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
+            _responseProcessors.Add(_historicalDataManager);
+
+            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
+            _responseProcessors.Add(_intradayBarManager);
+
+            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
+            _responseProcessors.Add(_intradayTickManager);
 
             RaiseEvent(InitialisationStatus, new EventArgs<bool>(true));
-        }
-
-        private void AddReferenceDataManagers()
-        {
-            _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
-            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
-            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
-            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
-
-            _responseProcessors.Add(_referenceDataManager);
-            _responseProcessors.Add(_historicalDataManager);
-            _responseProcessors.Add(_intradayBarManager);
-            _responseProcessors.Add(_intradayTickManager);
         }
 
         public void StartAsync()
@@ -91,11 +92,14 @@ namespace JetBlack.Bloomberg
             _identity = _session.CreateIdentity();
             _authenticator = _authenticatorFactory(this);
 
+            _responseProcessors.Add(_authenticator);
+
             _serviceManager.Request(ServiceUris.AuthenticationService)
                 .Then(service =>
                 {
                     _authorisationService = service;
                     _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
+                    _responseProcessors.Add(_securityEntitlementsManager);
                     return _authenticator.Request(_session, service, _identity);
                 })
                 .Then(isAuthenticated =>
@@ -109,7 +113,19 @@ namespace JetBlack.Bloomberg
                         .Then(service =>
                         {
                             _referenceDataService = service;
-                            AddReferenceDataManagers();
+
+                            _referenceDataManager = new ReferenceDataManager(_session, _referenceDataService, _identity);
+                            _responseProcessors.Add(_referenceDataManager);
+
+                            _historicalDataManager = new HistoricalDataManager(_session, _referenceDataService, _identity);
+                            _responseProcessors.Add(_historicalDataManager);
+
+                            _intradayBarManager = new IntradayBarManager(_session, _referenceDataService, _identity);
+                            _responseProcessors.Add(_intradayBarManager);
+
+                            _intradayTickManager = new IntradayTickManager(_session, _referenceDataService, _identity);
+                            _responseProcessors.Add(_intradayTickManager);
+
                             return Promise.Resolved();
                         }),
                     _serviceManager.Request(ServiceUris.MarketDataService)
@@ -192,15 +208,18 @@ namespace JetBlack.Bloomberg
                 {
                     case Event.EventType.PARTIAL_RESPONSE:
                     case Event.EventType.RESPONSE:
-                        ProcessResponse(session, eventArgs, eventArgs.Type == Event.EventType.PARTIAL_RESPONSE);
+                        eventArgs.GetMessages().ForEach(message => ProcessResponse(session, message, eventArgs.Type == Event.EventType.PARTIAL_RESPONSE));
+
                         break;
 
                     case Event.EventType.SUBSCRIPTION_DATA:
-                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message, false));
+                        if (_subscriptionManager != null)
+                            eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionData(session, message));
                         break;
 
                     case Event.EventType.SUBSCRIPTION_STATUS:
-                        eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionStatus(session, message));
+                        if (_subscriptionManager != null)
+                            eventArgs.ForEach(message => _subscriptionManager.ProcessSubscriptionStatus(session, message));
                         break;
 
                     case Event.EventType.SESSION_STATUS:
@@ -208,7 +227,8 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.SERVICE_STATUS:
-                        eventArgs.GetMessages().ForEach(message => _serviceManager.Process(session, message, OnFailure));
+                        if (_serviceManager != null)
+                            eventArgs.GetMessages().ForEach(message => _serviceManager.Process(session, message, OnFailure));
                         break;
 
                     case Event.EventType.ADMIN:
@@ -216,7 +236,8 @@ namespace JetBlack.Bloomberg
                         break;
 
                     case Event.EventType.TOKEN_STATUS:
-                        eventArgs.GetMessages().ForEach(message => _tokenManager.ProcessTokenStatusEvent(session, message, OnFailure));
+                        if (_tokenManager != null)
+                            eventArgs.GetMessages().ForEach(message => _tokenManager.ProcessTokenStatusEvent(session, message, OnFailure));
                         break;
 
                 }
@@ -249,30 +270,11 @@ namespace JetBlack.Bloomberg
             }
         }
 
-        private void ProcessResponse(Session session, Event eventArgs, bool isPartialResponse)
+        private void ProcessResponse(Session session, Message message, bool isPartialResponse)
         {
-            if (!eventArgs.IsValid)
-            {
-                // TODO: What should we do here?
-                return;
-            }
-
-            foreach (var message in eventArgs.GetMessages())
-            {
-                if (_authenticator.CanProcessResponse(message))
-                    _authenticator.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                else
-                {
-                    foreach (var processor in _responseProcessors)
-                    {
-                        if (processor.CanProcessResponse(message))
-                        {
-                            processor.ProcessResponse(session, message, isPartialResponse, OnFailure);
-                            break;
-                        }
-                    }
-                }
-            }
+            var processor = _responseProcessors.ToArray().FirstOrDefault(x => x.CanProcessResponse(message));
+            if (processor != null)
+                processor.ProcessResponse(session, message, isPartialResponse, OnFailure);
         }
 
         private void RaiseEvent<T>(EventHandler<T> handler, T args) where T:EventArgs

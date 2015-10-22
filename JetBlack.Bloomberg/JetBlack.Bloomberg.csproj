@@ -86,7 +86,6 @@
     <Compile Include="Authenticators\AuthenticationMethod.cs" />
     <Compile Include="Authenticators\Authenticator.cs" />
     <Compile Include="Authenticators\BpipeAuthenticator.cs" />
-    <Compile Include="Authenticators\IAuthenticator.cs" />
     <Compile Include="Authenticators\SapiAuthenticator.cs" />
     <Compile Include="BloombergController.cs" />
     <Compile Include="Models\Declarations.cs" />

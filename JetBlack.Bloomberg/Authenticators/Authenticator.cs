@@ -8,7 +8,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Authenticators
 {
-    public abstract class Authenticator : IAuthenticator, IResponseProcessor
+    public abstract class Authenticator : IResponseProcessor
     {
         protected readonly IDictionary<CorrelationID, AsyncPattern<bool>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<bool>>();
 

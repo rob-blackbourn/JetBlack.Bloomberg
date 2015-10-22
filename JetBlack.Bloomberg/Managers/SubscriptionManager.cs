@@ -46,7 +46,7 @@ namespace JetBlack.Bloomberg.Managers
             });
         }
 
-        public void ProcessSubscriptionData(Session session, Message message, bool isPartialResponse)
+        public void ProcessSubscriptionData(Session session, Message message)
         {
             IObserver<TickerData> observer;
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
