@@ -6,6 +6,8 @@ To make this compile you need the Bloomberg assembly which you can find here: ht
 
 This is a pretty early version. I haven't handled all the error responses, and I've never used it in anger, so I don't know how thread safe it is.
 
+I only have a B-Pipe service, so the SAPI stuff probably doesn't work.
+
 ## Notes
 
 I wanted to make the library entirely asynchronous. To keep this simple I have used
