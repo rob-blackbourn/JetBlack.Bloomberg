@@ -60,3 +60,6 @@ The "one-off" data is provided through a promise:
 _bloomberg.Request(ReferenceDataRequest.Create(new[] {"VOD LN Equity"}, new[] {"PX_LAST"}))
     .Done(response => response.ReferenceData.Values.ForEach(tickerData => Console.WriteLine("{0} - [{1}]", tickerData.Ticker, string.Join(",", tickerData.Data.Select(x => string.Format("{0}: {1}", x.Key, x.Value))))));
 ```
+
+In both cases the callback is invoked on the thread of the event handler, so you probably want to decouple this. For the observable you might use `.ObserveOn(TaskPoolScheduler.Default)`. For
+the promise you could create a task.
