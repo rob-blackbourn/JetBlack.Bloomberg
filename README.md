@@ -9,7 +9,7 @@ This is a pretty early version. I haven't handled all the error responses, and I
 ## Notes
 
 I wanted to make the library entirely asynchronous. To keep this simple I have used
-two techniques: Observable, and Promises.
+two techniques: Observables, and Promises.
 
 The ticking data is provided through an observable:
 
