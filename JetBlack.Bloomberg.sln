@@ -1,9 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetBlack.Bloomberg", "JetBlack.Bloomberg\JetBlack.Bloomberg.csproj", "{8D417EAF-A7FD-45D5-860F-1E2D1B09C642}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetBlack.Bloomberg.ConsoleApp", "JetBlack.Bloomberg.ConsoleApp\JetBlack.Bloomberg.ConsoleApp.csproj", "{AE94C886-67AB-47F5-8AE6-4D34154FA816}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{F5D797E4-AA7E-4494-9D20-F624D3BCB7A6}"
+	ProjectSection(SolutionItems) = preProject
+		lib\Bloomberglp.Blpapi.dll = lib\Bloomberglp.Blpapi.dll
+		lib\Bloomberglp.Blpapi.xml = lib\Bloomberglp.Blpapi.xml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +23,10 @@ Global
 		{8D417EAF-A7FD-45D5-860F-1E2D1B09C642}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D417EAF-A7FD-45D5-860F-1E2D1B09C642}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D417EAF-A7FD-45D5-860F-1E2D1B09C642}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE94C886-67AB-47F5-8AE6-4D34154FA816}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE94C886-67AB-47F5-8AE6-4D34154FA816}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE94C886-67AB-47F5-8AE6-4D34154FA816}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE94C886-67AB-47F5-8AE6-4D34154FA816}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
