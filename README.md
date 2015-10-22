@@ -46,8 +46,6 @@ _bloomberg.SessionStatus += (sender, eventArgs) =>
         _bloomberg.AuthenticateAsync();
 };
 
-_bloomberg.AdminStatus += OnAdminStatus;
-_bloomberg.AuthenticationStatus += OnAuthenticationStatus;
 _bloomberg.InitialisationStatus += (sender, eventArgs) =>
 {
     if (eventArgs.Args)
