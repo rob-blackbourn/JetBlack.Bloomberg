@@ -7,6 +7,7 @@ using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
+using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
@@ -65,7 +66,7 @@ namespace JetBlack.Bloomberg.Managers
                 
                 if (security.HasElement(ElementNames.SecurityError))
                 {
-                    observer.OnError(new ContentException<SecurityError>(security.GetElement(ElementNames.SecurityError).ToSecurityError()));
+                    referenceDataResponse.Add(ticker, Either.Left<SecurityError,FieldData>(security.GetElement(ElementNames.SecurityError).ToSecurityError()));
                     continue;
                 }
 
@@ -83,7 +84,7 @@ namespace JetBlack.Bloomberg.Managers
                         fieldData.Add(name, value);
                 }
 
-                referenceDataResponse.Add(ticker, fieldData);
+                referenceDataResponse.Add(ticker, Either.Right<SecurityError,FieldData>(fieldData));
             }
 
             observer.OnNext(referenceDataResponse);
