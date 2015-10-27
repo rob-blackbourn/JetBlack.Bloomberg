@@ -57,7 +57,7 @@ namespace JetBlack.Bloomberg.Managers
                 return;
             }
 
-            var historicalDataResponse = new HistoricalDataResponse(new Dictionary<string, Either<SecurityError,HistoricalTickerData>>());
+            var historicalDataResponse = new HistoricalDataResponse();
 
             var securityDataArrayElement = message.GetElement(ElementNames.SecurityData);
 
@@ -69,11 +69,11 @@ namespace JetBlack.Bloomberg.Managers
                 if (securityDataArrayElement.HasElement(ElementNames.SecurityError))
                 {
                     var securityError = securityDataArrayElement.GetElement(ElementNames.SecurityError).ToSecurityError();
-                    historicalDataResponse.HistoricalTickerData.Add(ticker, Either.Left<SecurityError,HistoricalTickerData>(securityError));
+                    historicalDataResponse.Add(ticker, Either.Left<SecurityError,HistoricalData>(securityError));
                     continue;
                 }
 
-                var historicalTickerData = new HistoricalTickerData(ticker, new List<KeyValuePair<DateTime, IDictionary<string, object>>>());
+                var historicalData = new HistoricalData();
 
                 var fieldDataArrayElement = securityDataArrayElement.GetElement(ElementNames.FieldData);
 
@@ -97,11 +97,11 @@ namespace JetBlack.Bloomberg.Managers
                     {
                         var date = (DateTime)data["date"];
                         data.Remove("date");
-                        historicalTickerData.Data.Add(new KeyValuePair<DateTime, IDictionary<string, object>>(date, data));
+                        historicalData.Add(new KeyValuePair<DateTime, IDictionary<string, object>>(date, data));
                     }
                 }
 
-                historicalDataResponse.HistoricalTickerData.Add(ticker, Either.Right<SecurityError, HistoricalTickerData>(historicalTickerData));
+                historicalDataResponse.Add(ticker, Either.Right<SecurityError, HistoricalData>(historicalData));
             }
 
             observer.OnNext(historicalDataResponse);
