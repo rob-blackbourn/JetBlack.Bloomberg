@@ -6,6 +6,6 @@ namespace JetBlack.Bloomberg
 {
     public interface ISubscriptionProvider
     {
-        IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields);
+        IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> request);
     }
 }

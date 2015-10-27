@@ -15,7 +15,7 @@ namespace JetBlack.Bloomberg.Managers
     {
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, IObserver<TickerData>> _subscriptions = new Dictionary<CorrelationID, IObserver<TickerData>>();
+        private readonly IDictionary<CorrelationID, IObserver<SubscriptionResponse>> _subscriptions = new Dictionary<CorrelationID, IObserver<SubscriptionResponse>>();
 
         public SubscriptionManager(Session session, Identity identity)
             : base(session)
@@ -23,18 +23,17 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
+        public IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> subscriptionRequests)
         {
-            return Observable.Create<TickerData>(observer =>
+            return Observable.Create<SubscriptionResponse>(observer =>
             {
-                var uniqueFields = fields.Distinct().ToArray();
                 var subscriptions = new List<Subscription>();
-                foreach (var ticker in tickers.Distinct())
+                foreach (var subscriptionRequest in subscriptionRequests)
                 {
                     var correlationId = new CorrelationID();
                     _subscriptions.Add(correlationId, observer);
 
-                    subscriptions.Add(new Subscription(ticker, uniqueFields, correlationId));
+                    subscriptions.Add(new Subscription(subscriptionRequest.Security, subscriptionRequest.Fields, correlationId));
                 }
                 Session.Subscribe(subscriptions, _identity);
 
@@ -48,16 +47,16 @@ namespace JetBlack.Bloomberg.Managers
 
         public void ProcessSubscriptionData(Session session, Message message)
         {
-            IObserver<TickerData> observer;
+            IObserver<SubscriptionResponse> observer;
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 
-            observer.OnNext(new TickerData(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue())));
+            observer.OnNext(new SubscriptionResponse(new TickerData(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue()))));
         }
 
         public void ProcessSubscriptionStatus(Session session, Message message)
         {
-            IObserver<TickerData> observer;
+            IObserver<SubscriptionResponse> observer;
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 

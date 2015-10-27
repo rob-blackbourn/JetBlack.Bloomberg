@@ -175,9 +175,9 @@ namespace JetBlack.Bloomberg
             return _securityEntitlementsManager.Request(securityEntitlementsRequest);
         }
 
-        public IObservable<TickerData> ToObservable(IEnumerable<string> tickers, IEnumerable<string> fields)
+        public IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> subscriptionRequests)
         {
-            return _subscriptionManager.ToObservable(tickers, fields);
+            return _subscriptionManager.ToObservable(subscriptionRequests);
         }
 
         public IPromise<IntradayTickResponse> Request(IntradayTickRequest request)
