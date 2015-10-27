@@ -2,13 +2,7 @@
 
 namespace JetBlack.Bloomberg.Models
 {
-    public class SecurityEntitlementsResponse
+    public class SecurityEntitlementsResponse : Dictionary<string, SecurityEntitlements>
     {
-        public SecurityEntitlementsResponse(IDictionary<string, SecurityEntitlements> securityEntitlements)
-        {
-            SecurityEntitlements = securityEntitlements;
-        }
-
-        public IDictionary<string, SecurityEntitlements> SecurityEntitlements { get; private set; }
     }
 }

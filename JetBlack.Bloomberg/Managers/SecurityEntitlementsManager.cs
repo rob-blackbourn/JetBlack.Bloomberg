@@ -65,7 +65,7 @@ namespace JetBlack.Bloomberg.Managers
             var tickers = _tickerMap[message.CorrelationID];
             _tickerMap.Remove(message.CorrelationID);
 
-            var securityEntitlementsResponse = new SecurityEntitlementsResponse(new Dictionary<string, SecurityEntitlements>());
+            var securityEntitlementsResponse = new SecurityEntitlementsResponse();
 
             if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
             {
@@ -75,19 +75,15 @@ namespace JetBlack.Bloomberg.Managers
                     var ticker = tickers[i];
                     var eidDataElement = eidDataArrayElement.GetValueAsElement(i);
 
-                    SecurityEntitlements securityEntitlements;
-                    if (securityEntitlementsResponse.SecurityEntitlements.TryGetValue(ticker, out securityEntitlements))
-                        securityEntitlementsResponse.SecurityEntitlements.Remove(ticker);
-                    else
-                    {
-                        var status = eidDataElement.GetElementAsInt32("status");
-                        var sequenceNumber = eidDataElement.GetElementAsInt32("sequenceNumber");
-                        securityEntitlements = new SecurityEntitlements(ticker, status, sequenceNumber, new List<int>());
-                    }
+                    var status = eidDataElement.GetElementAsInt32("status");
+                    var sequenceNumber = eidDataElement.GetElementAsInt32("sequenceNumber");
 
+                    var entitlementIds = new List<int>();
                     var eidsElement = eidDataElement.GetElement("eids");
                     for (var j = 0; j < eidsElement.NumValues; j++)
-                        securityEntitlements.EntitlementIds.Add(eidsElement.GetValueAsInt32(j));
+                        entitlementIds.Add(eidsElement.GetValueAsInt32(j));
+
+                    securityEntitlementsResponse.Add(ticker, new SecurityEntitlements(ticker, status, sequenceNumber, entitlementIds));
                 }
 
                 observer.OnNext(securityEntitlementsResponse);
