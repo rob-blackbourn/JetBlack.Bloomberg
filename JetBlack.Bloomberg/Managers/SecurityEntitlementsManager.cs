@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
@@ -15,7 +17,6 @@ namespace JetBlack.Bloomberg.Managers
         private readonly Identity _identity;
 
         private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
-        private readonly IDictionary<CorrelationID, SecurityEntitlementsResponse> _partials = new Dictionary<CorrelationID, SecurityEntitlementsResponse>();
 
         public SecurityEntitlementsManager(Session session, Service service, Identity identity)
             : base(session)
@@ -24,9 +25,9 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public override IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest)
+        public override IObservable<SecurityEntitlementsResponse> ToObservable(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
-            return new Promise<SecurityEntitlementsResponse>((resolve, reject) =>
+            return Observable.Create<SecurityEntitlementsResponse>(observer =>
             {
                 var request = _service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
                 var securitiesElement = request.GetElement(ElementNames.Securities);
@@ -38,10 +39,12 @@ namespace JetBlack.Bloomberg.Managers
                 });
 
                 var correlationId = new CorrelationID();
-                AsyncHandlers.Add(correlationId, new AsyncPattern<SecurityEntitlementsResponse>(resolve, reject));
+                Observers.Add(correlationId, observer);
                 _tickerMap.Add(correlationId, securities);
 
                 Session.SendRequest(request, _identity, correlationId);
+
+                return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }
 
@@ -52,8 +55,8 @@ namespace JetBlack.Bloomberg.Managers
 
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<SecurityEntitlementsResponse> asyncHandler;
-            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            IObserver<SecurityEntitlementsResponse> observer;
+            if (!Observers.TryGetValue(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));
                 return;
@@ -62,11 +65,7 @@ namespace JetBlack.Bloomberg.Managers
             var tickers = _tickerMap[message.CorrelationID];
             _tickerMap.Remove(message.CorrelationID);
 
-            SecurityEntitlementsResponse securityEntitlementsResponse;
-            if (_partials.TryGetValue(message.CorrelationID, out securityEntitlementsResponse))
-                _partials.Remove(message.CorrelationID);
-            else
-                securityEntitlementsResponse = new SecurityEntitlementsResponse(new Dictionary<string, SecurityEntitlements>());
+            var securityEntitlementsResponse = new SecurityEntitlementsResponse(new Dictionary<string, SecurityEntitlements>());
 
             if (MessageTypeNames.SecurityEntitlementsResponse.Equals(message.MessageType))
             {
@@ -91,10 +90,13 @@ namespace JetBlack.Bloomberg.Managers
                         securityEntitlements.EntitlementIds.Add(eidsElement.GetValueAsInt32(j));
                 }
 
-                if (isPartialResponse)
-                    _partials[message.CorrelationID] = securityEntitlementsResponse;
-                else
-                    asyncHandler.OnSuccess(securityEntitlementsResponse);
+                observer.OnNext(securityEntitlementsResponse);
+
+                if (!isPartialResponse)
+                {
+                    observer.OnCompleted();
+                    Observers.Remove(message.CorrelationID);
+                }
             }
             else
                 onFailure(session, message, new Exception("Unknown message type: " + message));

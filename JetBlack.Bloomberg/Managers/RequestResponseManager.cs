@@ -1,5 +1,5 @@
-﻿using Bloomberglp.Blpapi;
-using JetBlack.Monads;
+﻿using System;
+using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Managers
 {
@@ -12,6 +12,6 @@ namespace JetBlack.Bloomberg.Managers
 
         public abstract bool CanProcessResponse(Message message);
 
-        public abstract IPromise<TResponse> Request(TRequest request);
+        public abstract IObservable<TResponse> ToObservable(TRequest request);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
@@ -9,8 +10,10 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class TokenManager : AsyncManager<string>, ITokenProvider
+    internal class TokenManager : Manager, ITokenProvider
     {
+        protected readonly IDictionary<CorrelationID, AsyncPattern<string>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<string>>();
+
         public TokenManager(Session session)
             : base(session)
         {

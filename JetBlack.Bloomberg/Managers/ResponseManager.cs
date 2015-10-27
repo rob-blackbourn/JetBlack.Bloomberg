@@ -3,7 +3,7 @@ using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal abstract class ResponseManager<TResponse> : AsyncManager<TResponse>
+    internal abstract class ResponseManager<TResponse> : ObserverManager<TResponse>
     {
         protected ResponseManager(Session session)
             : base(session)

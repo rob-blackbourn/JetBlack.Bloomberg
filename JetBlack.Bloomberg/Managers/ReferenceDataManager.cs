@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
@@ -16,8 +18,6 @@ namespace JetBlack.Bloomberg.Managers
         private readonly Service _service;
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, ReferenceDataResponse> _partial = new Dictionary<CorrelationID, ReferenceDataResponse>();
-
         public ReferenceDataManager(Session session, Service service, Identity identity)
             : base(session)
         {
@@ -25,13 +25,14 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public override IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request)
+        public override IObservable<ReferenceDataResponse> ToObservable(ReferenceDataRequest request)
         {
-            return new Promise<ReferenceDataResponse>((resolve, reject) =>
+            return Observable.Create<ReferenceDataResponse>(observer =>
             {
                 var correlationId = new CorrelationID();
-                AsyncHandlers.Add(correlationId, AsyncPattern<ReferenceDataResponse>.Create(resolve, reject));
+                Observers.Add(correlationId, observer);
                 Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }
 
@@ -42,8 +43,8 @@ namespace JetBlack.Bloomberg.Managers
 
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<ReferenceDataResponse> asyncHandler;
-            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            IObserver<ReferenceDataResponse> observer;
+            if (!Observers.TryGetValue(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
@@ -51,15 +52,11 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
-                asyncHandler.OnFailure(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
+                observer.OnError(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
                 return;
             }
 
-            ReferenceDataResponse referenceDataResponse;
-            if (_partial.TryGetValue(message.CorrelationID, out referenceDataResponse))
-                _partial.Remove(message.CorrelationID);
-            else
-                referenceDataResponse = new ReferenceDataResponse(new Dictionary<string, TickerData>(new Dictionary<string, TickerData>()));
+            var referenceDataResponse = new ReferenceDataResponse(new Dictionary<string, TickerData>(new Dictionary<string, TickerData>()));
 
             var securities = message.GetElement(ElementNames.SecurityData);
             for (var i = 0; i < securities.NumValues; ++i)
@@ -69,7 +66,7 @@ namespace JetBlack.Bloomberg.Managers
                 
                 if (security.HasElement(ElementNames.SecurityError))
                 {
-                    asyncHandler.OnFailure(new ContentException<TickerSecurityError>(new TickerSecurityError(ticker, security.GetElement(ElementNames.SecurityError).ToSecurityError(), isPartialResponse)));
+                    observer.OnError(new ContentException<SecurityError>(security.GetElement(ElementNames.SecurityError).ToSecurityError()));
                     continue;
                 }
 
@@ -94,10 +91,13 @@ namespace JetBlack.Bloomberg.Managers
                 referenceDataResponse.ReferenceData[ticker] = tickerData;
             }
 
-            if (isPartialResponse)
-                _partial[message.CorrelationID] = referenceDataResponse;
-            else
-                asyncHandler.OnSuccess(referenceDataResponse);
+            observer.OnNext(referenceDataResponse);
+
+            if (!isPartialResponse)
+            {
+                observer.OnCompleted();
+                Observers.Remove(message.CorrelationID);
+            }
         }
     }
 }

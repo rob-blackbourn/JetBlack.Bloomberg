@@ -170,9 +170,9 @@ namespace JetBlack.Bloomberg
             return _serviceManager.Request(uri);
         }
 
-        public IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest)
+        public IObservable<SecurityEntitlementsResponse> ToObservable(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
-            return _securityEntitlementsManager.Request(securityEntitlementsRequest);
+            return _securityEntitlementsManager.ToObservable(securityEntitlementsRequest);
         }
 
         public IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> subscriptionRequests)
@@ -180,24 +180,24 @@ namespace JetBlack.Bloomberg
             return _subscriptionManager.ToObservable(subscriptionRequests);
         }
 
-        public IPromise<IntradayTickResponse> Request(IntradayTickRequest request)
+        public IObservable<IntradayTickResponse> ToObservable(IntradayTickRequest request)
         {
-            return _intradayTickManager.Request(request);
+            return _intradayTickManager.ToObservable(request);
         }
 
-        public IPromise<ReferenceDataResponse> Request(ReferenceDataRequest request)
+        public IObservable<ReferenceDataResponse> ToObservable(ReferenceDataRequest request)
         {
-            return _referenceDataManager.Request(request);
+            return _referenceDataManager.ToObservable(request);
         }
 
-        public IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request)
+        public IObservable<HistoricalDataResponse> ToObservable(HistoricalDataRequest request)
         {
-            return _historicalDataManager.Request(request);
+            return _historicalDataManager.ToObservable(request);
         }
 
-        public IPromise<IntradayBarResponse> Request(IntradayBarRequest request)
+        public IObservable<IntradayBarResponse> ToObservable(IntradayBarRequest request)
         {
-            return _intradayBarManager.Request(request);
+            return _intradayBarManager.ToObservable(request);
         }
 
         private void HandleMessage(Event eventArgs, Session session)

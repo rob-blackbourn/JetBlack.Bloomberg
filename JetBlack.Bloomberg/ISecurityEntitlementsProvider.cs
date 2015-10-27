@@ -1,10 +1,10 @@
-﻿using JetBlack.Bloomberg.Models;
-using JetBlack.Monads;
+﻿using System;
+using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg
 {
     public interface ISecurityEntitlementsProvider
     {
-        IPromise<SecurityEntitlementsResponse> Request(SecurityEntitlementsRequest securityEntitlementsRequest);
+        IObservable<SecurityEntitlementsResponse> ToObservable(SecurityEntitlementsRequest securityEntitlementsRequest);
     }
 }

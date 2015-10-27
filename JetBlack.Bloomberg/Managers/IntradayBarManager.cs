@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
-using JetBlack.Bloomberg.Patterns;
 using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
-using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
@@ -17,7 +17,6 @@ namespace JetBlack.Bloomberg.Managers
         private readonly Identity _identity;
 
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>();
-        private readonly IDictionary<CorrelationID, IntradayBarResponse> _partial = new Dictionary<CorrelationID, IntradayBarResponse>();
 
         public IntradayBarManager(Session session, Service service, Identity identity)
             : base(session)
@@ -26,14 +25,15 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public override IPromise<IntradayBarResponse> Request(IntradayBarRequest request)
+        public override IObservable<IntradayBarResponse> ToObservable(IntradayBarRequest request)
         {
-            return new Promise<IntradayBarResponse>((resolve, reject) =>
+            return Observable.Create<IntradayBarResponse>(observer =>
             {
                 var correlationId = new CorrelationID();
-                AsyncHandlers.Add(correlationId, AsyncPattern<IntradayBarResponse>.Create(resolve, reject));
+                Observers.Add(correlationId, observer);
                 _tickerMap.Add(correlationId, request.Ticker);
                 Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }
 
@@ -44,8 +44,8 @@ namespace JetBlack.Bloomberg.Managers
 
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<IntradayBarResponse> asyncHandler;
-            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            IObserver<IntradayBarResponse> observer;
+            if (!Observers.TryGetValue(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
@@ -56,20 +56,14 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
-                asyncHandler.OnFailure(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
+                observer.OnError(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
                 return;
             }
 
             var barData = message.GetElement(ElementNames.BarData);
 
-            IntradayBarResponse intradayBarResponse;
-            if (_partial.TryGetValue(message.CorrelationID, out intradayBarResponse))
-                _partial.Remove(message.CorrelationID);
-            else
-            {
-                var entitlementIds = barData.HasElement(ElementNames.EidData) ? barData.GetElement(ElementNames.EidData).ExtractEids() : null;
-                intradayBarResponse = new IntradayBarResponse(ticker, new List<IntradayBar>(), entitlementIds);
-            }
+            var entitlementIds = barData.HasElement(ElementNames.EidData) ? barData.GetElement(ElementNames.EidData).ExtractEids() : null;
+            var intradayBarResponse = new IntradayBarResponse(ticker, new List<IntradayBar>(), entitlementIds);
 
             var barTickData = barData.GetElement(ElementNames.BarTickData);
 
@@ -87,13 +81,13 @@ namespace JetBlack.Bloomberg.Managers
                         element.GetElementAsInt64(ElementNames.Volume)));
             }
 
-            if (isPartialResponse)
+            observer.OnNext(intradayBarResponse);
+
+            if (!isPartialResponse)
             {
-                _tickerMap.Add(message.CorrelationID, ticker);
-                _partial[message.CorrelationID] = intradayBarResponse;
+                observer.OnCompleted();
+                Observers.Remove(message.CorrelationID);
             }
-            else
-                asyncHandler.OnSuccess(intradayBarResponse);
         }
     }
 }

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
-using JetBlack.Bloomberg.Patterns;
 using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
@@ -16,8 +17,6 @@ namespace JetBlack.Bloomberg.Managers
         private readonly Service _service;
         private readonly Identity _identity;
 
-        private readonly IDictionary<CorrelationID, HistoricalDataResponse> _partial = new Dictionary<CorrelationID, HistoricalDataResponse>();
-
         public HistoricalDataManager(Session session, Service service, Identity identity)
             : base(session)
         {
@@ -25,13 +24,14 @@ namespace JetBlack.Bloomberg.Managers
             _identity = identity;
         }
 
-        public override IPromise<HistoricalDataResponse> Request(HistoricalDataRequest request)
+        public override IObservable<HistoricalDataResponse> ToObservable(HistoricalDataRequest request)
         {
-            return new Promise<HistoricalDataResponse>((resolve, reject) =>
+            return Observable.Create<HistoricalDataResponse>(observer =>
             {
                 var correlationId = new CorrelationID();
-                AsyncHandlers.Add(correlationId, AsyncPattern<HistoricalDataResponse>.Create(resolve, reject));
+                Observers.Add(correlationId, observer);
                 Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }
 
@@ -42,8 +42,8 @@ namespace JetBlack.Bloomberg.Managers
 
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
-            AsyncPattern<HistoricalDataResponse> asyncHandler;
-            if (!AsyncHandlers.TryGetValue(message.CorrelationID, out asyncHandler))
+            IObserver<HistoricalDataResponse> observer;
+            if (!Observers.TryGetValue(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
@@ -51,47 +51,42 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
-                asyncHandler.OnFailure(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
+                // We assume that no more messages will be sent on this correlation id.
+                observer.OnError(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
+                Observers.Remove(message.CorrelationID);
                 return;
             }
 
-            HistoricalDataResponse historicalDataResponse;
-            if (_partial.TryGetValue(message.CorrelationID, out historicalDataResponse))
-                _partial.Remove(message.CorrelationID);
-            else
-                historicalDataResponse = new HistoricalDataResponse(new Dictionary<string,HistoricalTickerData>());
+            var historicalDataResponse = new HistoricalDataResponse(new Dictionary<string, Either<SecurityError,HistoricalTickerData>>());
 
-            var securityDataArray = message.GetElement(ElementNames.SecurityData);
+            var securityDataArrayElement = message.GetElement(ElementNames.SecurityData);
 
-            for (var i = 0; i < securityDataArray.NumValues; ++i)
+            for (var securityIndex = 0; securityIndex < securityDataArrayElement.NumValues; ++securityIndex)
             {
-                var securityData = securityDataArray.GetElement(i);
-                var ticker = securityData.GetValueAsString();
+                var securityDataElement = securityDataArrayElement.GetElement(securityIndex);
+                var ticker = securityDataElement.GetValueAsString();
 
-                if (securityDataArray.HasElement(ElementNames.SecurityError))
+                if (securityDataArrayElement.HasElement(ElementNames.SecurityError))
                 {
-                    asyncHandler.OnFailure(new ContentException<TickerSecurityError>(new TickerSecurityError(ticker, securityDataArray.GetElement(ElementNames.SecurityError).ToSecurityError(), isPartialResponse)));
+                    var securityError = securityDataArrayElement.GetElement(ElementNames.SecurityError).ToSecurityError();
+                    historicalDataResponse.HistoricalTickerData.Add(ticker, Either.Left<SecurityError,HistoricalTickerData>(securityError));
                     continue;
                 }
 
-                HistoricalTickerData historicalTickerData;
-                if (historicalDataResponse.HistoricalTickerData.TryGetValue(ticker, out historicalTickerData))
-                    historicalDataResponse.HistoricalTickerData.Remove(ticker);
-                else
-                    historicalTickerData = new HistoricalTickerData(ticker, new List<KeyValuePair<DateTime, IDictionary<string, object>>>());
+                var historicalTickerData = new HistoricalTickerData(ticker, new List<KeyValuePair<DateTime, IDictionary<string, object>>>());
 
-                var fieldDataArray = securityDataArray.GetElement(ElementNames.FieldData);
+                var fieldDataArrayElement = securityDataArrayElement.GetElement(ElementNames.FieldData);
 
-                for (var j = 0; j < fieldDataArray.NumValues; ++j)
+                for (var fieldDataIndex = 0; fieldDataIndex < fieldDataArrayElement.NumValues; ++fieldDataIndex)
                 {
                     var data = new Dictionary<string, object>();
-                    var fieldData = fieldDataArray.GetValueAsElement(j);
+                    var fieldDataElement = fieldDataArrayElement.GetValueAsElement(fieldDataIndex);
 
-                    for (var k = 0; k < fieldData.NumElements; ++k)
+                    for (var i = 0; i < fieldDataElement.NumElements; ++i)
                     {
-                        var field = fieldData.GetElement(k);
-                        var name = field.Name.ToString();
-                        var value = field.GetFieldValue();
+                        var fieldElement = fieldDataElement.GetElement(i);
+                        var name = fieldElement.Name.ToString();
+                        var value = fieldElement.GetFieldValue();
                         if (data.ContainsKey(name))
                             data[name] = value;
                         else
@@ -106,13 +101,16 @@ namespace JetBlack.Bloomberg.Managers
                     }
                 }
 
-                historicalDataResponse.HistoricalTickerData[ticker] = historicalTickerData;
+                historicalDataResponse.HistoricalTickerData.Add(ticker, Either.Right<SecurityError, HistoricalTickerData>(historicalTickerData));
             }
 
-            if (isPartialResponse)
-                _partial[message.CorrelationID] = historicalDataResponse;
-            else
-                asyncHandler.OnSuccess(historicalDataResponse);
+            observer.OnNext(historicalDataResponse);
+
+            if (!isPartialResponse)
+            {
+                observer.OnCompleted();
+                Observers.Remove(message.CorrelationID);
+            }
         }
     }
 }

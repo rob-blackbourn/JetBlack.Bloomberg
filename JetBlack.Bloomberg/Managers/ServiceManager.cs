@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
@@ -8,8 +9,10 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ServiceManager : AsyncManager<Service>
+    internal class ServiceManager : Manager
     {
+        protected readonly IDictionary<CorrelationID, AsyncPattern<Service>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<Service>>();
+
         public ServiceManager(Session session)
             : base(session)
         {

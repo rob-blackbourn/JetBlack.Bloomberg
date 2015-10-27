@@ -1,11 +1,11 @@
-﻿using JetBlack.Bloomberg.Models;
+﻿using System;
+using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
-using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
     public interface IIntradayBarProvider
     {
-        IPromise<IntradayBarResponse> Request(IntradayBarRequest request);
+        IObservable<IntradayBarResponse> ToObservable(IntradayBarRequest request);
     }
 }
