@@ -77,6 +77,7 @@
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
     <Compile Include="Messages\EventArgs.cs" />
+    <Compile Include="Models\FieldData.cs" />
     <Compile Include="Models\HistoricalDataResponse.cs" />
     <Compile Include="Models\SecurityEntitlements.cs" />
     <Compile Include="Identifiers\OperationNames.cs" />

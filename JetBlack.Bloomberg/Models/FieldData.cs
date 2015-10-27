@@ -2,7 +2,7 @@
 
 namespace JetBlack.Bloomberg.Models
 {
-    public class ReferenceDataResponse : Dictionary<string,FieldData>
+    public class FieldData : Dictionary<string, object>
     {
     }
 }

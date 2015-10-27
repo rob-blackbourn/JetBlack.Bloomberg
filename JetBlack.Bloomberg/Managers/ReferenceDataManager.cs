@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
-using JetBlack.Bloomberg.Patterns;
 using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
-using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
@@ -52,11 +49,13 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
+                // We assume no more messages will be delivered for this correlation id.
                 observer.OnError(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
+                Observers.Remove(message.CorrelationID);
                 return;
             }
 
-            var referenceDataResponse = new ReferenceDataResponse(new Dictionary<string, TickerData>(new Dictionary<string, TickerData>()));
+            var referenceDataResponse = new ReferenceDataResponse();
 
             var securities = message.GetElement(ElementNames.SecurityData);
             for (var i = 0; i < securities.NumValues; ++i)
@@ -70,11 +69,7 @@ namespace JetBlack.Bloomberg.Managers
                     continue;
                 }
 
-                TickerData tickerData;
-                if (referenceDataResponse.ReferenceData.TryGetValue(ticker, out tickerData))
-                    referenceDataResponse.ReferenceData.Remove(ticker);
-                else
-                    tickerData = new TickerData(ticker, new Dictionary<string, object>());
+                var fieldData = new FieldData();
 
                 var fields = security.GetElement(ElementNames.FieldData);
                 for (var j = 0; j < fields.NumElements; ++j)
@@ -82,13 +77,13 @@ namespace JetBlack.Bloomberg.Managers
                     var field = fields.GetElement(j);
                     var name = field.Name.ToString();
                     var value = field.GetFieldValue();
-                    if (tickerData.Data.ContainsKey(name))
-                        tickerData.Data[name] = value;
+                    if (fieldData.ContainsKey(name))
+                        fieldData[name] = value;
                     else
-                        tickerData.Data.Add(name, value);
+                        fieldData.Add(name, value);
                 }
 
-                referenceDataResponse.ReferenceData[ticker] = tickerData;
+                referenceDataResponse.Add(ticker, fieldData);
             }
 
             observer.OnNext(referenceDataResponse);
