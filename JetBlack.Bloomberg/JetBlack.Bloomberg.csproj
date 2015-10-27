@@ -102,7 +102,6 @@
     <Compile Include="Models\ResponseError.cs" />
     <Compile Include="Models\SecurityError.cs" />
     <Compile Include="Models\SessionDecorator.cs" />
-    <Compile Include="Models\TickerData.cs" />
     <Compile Include="Models\IntradayBarResponse.cs" />
     <Compile Include="Models\IntradayTickResponse.cs" />
     <Compile Include="Models\TickerResponseError.cs" />
