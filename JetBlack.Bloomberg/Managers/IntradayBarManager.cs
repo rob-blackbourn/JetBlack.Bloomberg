@@ -56,29 +56,31 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
+                // We assume nore more messages will be sent for this correlation id.
                 observer.OnError(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
+                Observers.Remove(message.CorrelationID);
                 return;
             }
 
-            var barData = message.GetElement(ElementNames.BarData);
+            var barDataElement = message.GetElement(ElementNames.BarData);
 
-            var entitlementIds = barData.HasElement(ElementNames.EidData) ? barData.GetElement(ElementNames.EidData).ExtractEids() : null;
+            var entitlementIds = barDataElement.HasElement(ElementNames.EidData) ? barDataElement.GetElement(ElementNames.EidData).ExtractEids() : null;
             var intradayBarResponse = new IntradayBarResponse(ticker, new List<IntradayBar>(), entitlementIds);
 
-            var barTickData = barData.GetElement(ElementNames.BarTickData);
+            var barTickDataArrayElement = barDataElement.GetElement(ElementNames.BarTickData);
 
-            for (var i = 0; i < barTickData.NumValues; ++i)
+            for (var i = 0; i < barTickDataArrayElement.NumValues; ++i)
             {
-                var element = barTickData.GetValueAsElement(i);
+                var barTickDataElement = barTickDataArrayElement.GetValueAsElement(i);
                 intradayBarResponse.IntradayBars.Add(
                     new IntradayBar(
-                        element.GetElementAsDatetime(ElementNames.Time).ToDateTime(),
-                        element.GetElementAsFloat64(ElementNames.Open),
-                        element.GetElementAsFloat64(ElementNames.High),
-                        element.GetElementAsFloat64(ElementNames.Low),
-                        element.GetElementAsFloat64(ElementNames.Close),
-                        element.GetElementAsInt32(ElementNames.NumEvents),
-                        element.GetElementAsInt64(ElementNames.Volume)));
+                        barTickDataElement.GetElementAsDatetime(ElementNames.Time).ToDateTime(),
+                        barTickDataElement.GetElementAsFloat64(ElementNames.Open),
+                        barTickDataElement.GetElementAsFloat64(ElementNames.High),
+                        barTickDataElement.GetElementAsFloat64(ElementNames.Low),
+                        barTickDataElement.GetElementAsFloat64(ElementNames.Close),
+                        barTickDataElement.GetElementAsInt32(ElementNames.NumEvents),
+                        barTickDataElement.GetElementAsInt64(ElementNames.Volume)));
             }
 
             observer.OnNext(intradayBarResponse);
