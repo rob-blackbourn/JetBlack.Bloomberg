@@ -9,10 +9,8 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class ServiceManager : Manager
+    internal class ServiceManager : AsyncManager<Service>
     {
-        protected readonly IDictionary<CorrelationID, AsyncPattern<Service>> AsyncHandlers = new Dictionary<CorrelationID, AsyncPattern<Service>>();
-
         public ServiceManager(Session session)
             : base(session)
         {
