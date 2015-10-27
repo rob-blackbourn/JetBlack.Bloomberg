@@ -7,5 +7,6 @@
         public const string IntradayTickRequest = "IntradayTickRequest";
         public const string ReferenceDataRequest = "ReferenceDataRequest";
         public const string SecurityEntitlementsRequest = "SecurityEntitlementsRequest";
+        public const string UserEntitlementsRequest = "UserEntitlementsRequest";
     }
 }

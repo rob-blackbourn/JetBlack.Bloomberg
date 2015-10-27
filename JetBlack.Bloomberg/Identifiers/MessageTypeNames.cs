@@ -23,5 +23,6 @@ namespace JetBlack.Bloomberg.Identifiers
         public static readonly Name SubscriptionTerminated = Name.GetName("SubscriptionTerminated");
         public static readonly Name TokenGenerationFailure = Name.GetName("TokenGenerationFailure");
         public static readonly Name TokenGenerationSuccess = Name.GetName("TokenGenerationSuccess");
+        public static readonly Name UserEntitlementsResponse = Name.GetName("UserEntitlementsResponse");
     }
 }

@@ -67,7 +67,9 @@ namespace JetBlack.Bloomberg.Identifiers
         public static readonly Name TickData = Name.GetName("tickData");
         public static readonly Name Time = Name.GetName("time");
         public static readonly Name Token = Name.GetName("token");
+        public static readonly Name UserInfo = Name.GetName("userInfo");
         public static readonly Name UseUTCTime = Name.GetName("useUTCTime");
+        public static readonly Name Uuid = Name.GetName("uuid");
         public static readonly Name Value = Name.GetName("value");
         public static readonly Name Volume = Name.GetName("volume");
     }

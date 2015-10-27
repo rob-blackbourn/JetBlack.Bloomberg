@@ -14,7 +14,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg
 {
-    public class BloombergController : ITokenProvider, ISecurityEntitlementsProvider, IReferenceDataProvider, IHistoricalDataProvider, IIntradayBarProvider, IIntradayTickProvider, ISubscriptionProvider
+    public class BloombergController : ITokenProvider, ISecurityEntitlementsProvider, IUserEntitlementsProvider, IReferenceDataProvider, IHistoricalDataProvider, IIntradayBarProvider, IIntradayTickProvider, ISubscriptionProvider
     {
         public event EventHandler<EventArgs<SessionStatus>> SessionStatus;
         public event EventHandler<EventArgs<AdminStatus>> AdminStatus;
@@ -32,6 +32,7 @@ namespace JetBlack.Bloomberg
         private Service _marketDataService;
         private Service _referenceDataService;
         private SecurityEntitlementsManager _securityEntitlementsManager;
+        private UserEntitlementsManager _userEntitlementsManager;
         private ReferenceDataManager _referenceDataManager;
         private HistoricalDataManager _historicalDataManager;
         private IntradayBarManager _intradayBarManager;
@@ -59,6 +60,9 @@ namespace JetBlack.Bloomberg
 
             _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
             _responseProcessors.Add(_securityEntitlementsManager);
+
+            _userEntitlementsManager = new UserEntitlementsManager(_session, _authorisationService, _identity);
+            _responseProcessors.Add(_userEntitlementsManager);
 
             _authenticator = _authenticatorFactory(this);
             _responseProcessors.Add(_authenticator);
@@ -98,8 +102,13 @@ namespace JetBlack.Bloomberg
                 .Then(service =>
                 {
                     _authorisationService = service;
+
                     _securityEntitlementsManager = new SecurityEntitlementsManager(_session, _authorisationService, _identity);
                     _responseProcessors.Add(_securityEntitlementsManager);
+
+                    _userEntitlementsManager = new UserEntitlementsManager(_session, _authorisationService, _identity);
+                    _responseProcessors.Add(_userEntitlementsManager);
+
                     return _authenticator.Request(_session, service, _identity);
                 })
                 .Then(isAuthenticated =>
@@ -173,6 +182,11 @@ namespace JetBlack.Bloomberg
         public IObservable<SecurityEntitlementsResponse> ToObservable(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
             return _securityEntitlementsManager.ToObservable(securityEntitlementsRequest);
+        }
+
+        public IObservable<UserEntitlementsResponse> ToObservable(UserEntitlementsRequest userEntitlementsRequest)
+        {
+            return _userEntitlementsManager.ToObservable(userEntitlementsRequest);
         }
 
         public IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> subscriptionRequests)
