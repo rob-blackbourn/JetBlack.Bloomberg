@@ -113,7 +113,6 @@
     <Compile Include="Models\IntradayTick.cs" />
     <Compile Include="Requests\IntradayTickRequest.cs" />
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
-    <Compile Include="Models\TokenGenerationFailure.cs" />
     <Compile Include="Identifiers\MessageTypeNames.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Managers\ReferenceDataManager.cs" />
