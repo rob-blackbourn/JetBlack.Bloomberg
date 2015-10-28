@@ -3,7 +3,7 @@ using Bloomberglp.Blpapi;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal abstract class RequestResponseManager<TRequest, TResponse> : ResponseManager<TResponse>, IResponseProcessor
+    internal abstract class RequestResponseManager<TRequest, TResponse> : ObserverManager<TResponse>, IResponseProcessor
     {
         protected readonly Service Service;
         protected readonly Identity Identity;
@@ -18,5 +18,7 @@ namespace JetBlack.Bloomberg.Managers
         public abstract bool CanProcessResponse(Message message);
 
         public abstract IObservable<TResponse> ToObservable(TRequest request);
+
+        public abstract void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure);
     }
 }

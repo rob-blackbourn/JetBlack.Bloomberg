@@ -73,7 +73,6 @@
     <Compile Include="Managers\ObserverManager.cs" />
     <Compile Include="Managers\IResponseProcessor.cs" />
     <Compile Include="Managers\RequestResponseManager.cs" />
-    <Compile Include="Managers\ResponseManager.cs" />
     <Compile Include="Managers\Manager.cs" />
     <Compile Include="Managers\SecurityEntitlementsManager.cs" />
     <Compile Include="Exceptions\ContentException.cs" />
