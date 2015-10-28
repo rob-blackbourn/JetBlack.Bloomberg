@@ -7,9 +7,11 @@ namespace JetBlack.Bloomberg.Managers
     internal class ObserverManager<TResponse> : Manager
     {
         private readonly IDictionary<CorrelationID, IObserver<TResponse>> _observers = new Dictionary<CorrelationID, IObserver<TResponse>>();
+        protected readonly Identity Identity;
 
-        public ObserverManager(Session session) : base(session)
+        public ObserverManager(Session session, Identity identity) : base(session)
         {
+            Identity = identity;
         }
 
         public void Add(CorrelationID correlationId, IObserver<TResponse> observer)

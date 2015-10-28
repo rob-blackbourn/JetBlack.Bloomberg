@@ -9,13 +9,11 @@ namespace JetBlack.Bloomberg.Managers
         private readonly IDictionary<CorrelationID, TCorrelation> _correlationMap = new Dictionary<CorrelationID, TCorrelation>();
 
         protected readonly Service Service;
-        protected readonly Identity Identity;
 
         protected RequestResponseManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, identity)
         {
             Service = service;
-            Identity = identity;
         }
 
         public abstract bool CanProcessResponse(Message message);

@@ -12,12 +12,9 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class SubscriptionManager : ObserverManager<SubscriptionResponse>, ISubscriptionProvider
     {
-        private readonly Identity _identity;
-
         public SubscriptionManager(Session session, Identity identity)
-            : base(session)
+            : base(session, identity)
         {
-            _identity = identity;
         }
 
         public IObservable<SubscriptionResponse> ToObservable(IEnumerable<SubscriptionRequest> subscriptionRequests)
@@ -32,7 +29,7 @@ namespace JetBlack.Bloomberg.Managers
 
                     subscriptions.Add(new Subscription(subscriptionRequest.Security, subscriptionRequest.Fields, correlationId));
                 }
-                Session.Subscribe(subscriptions, _identity);
+                Session.Subscribe(subscriptions, Identity);
 
                 return Disposable.Create(() =>
                 {
