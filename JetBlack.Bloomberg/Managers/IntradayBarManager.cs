@@ -56,9 +56,18 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
+                var responseErrorElement = message.GetElement(ElementNames.ResponseError);
+                var responseError = new ResponseError(
+                    responseErrorElement.GetElementAsString(ElementNames.Source),
+                    responseErrorElement.GetElementAsString(ElementNames.Category),
+                    responseErrorElement.GetElementAsString(ElementNames.SubCategory),
+                    responseErrorElement.GetElementAsInt32(ElementNames.Code),
+                    responseErrorElement.GetElementAsString(ElementNames.Message));
+                observer.OnError(new ContentException<TickerResponseError>(new TickerResponseError(ticker, responseError)));
+
                 // We assume nore more messages will be sent for this correlation id.
-                observer.OnError(new ContentException<TickerResponseError>(new TickerResponseError(ticker, message.GetElement(ElementNames.ResponseError).ToResponseError())));
                 Observers.Remove(message.CorrelationID);
+
                 return;
             }
 

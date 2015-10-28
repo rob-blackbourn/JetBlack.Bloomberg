@@ -85,6 +85,7 @@
     <Compile Include="Identifiers\OperationNames.cs" />
     <Compile Include="Models\SecurityEntitlementsRequest.cs" />
     <Compile Include="Models\SecurityEntitlementsResponse.cs" />
+    <Compile Include="Models\SubscriptionFailure.cs" />
     <Compile Include="Models\SubscriptionRequest.cs" />
     <Compile Include="Models\SubscriptionResponse.cs" />
     <Compile Include="Models\UserEntitlementsRequest.cs" />
@@ -104,12 +105,9 @@
     <Compile Include="Models\HistoricalData.cs" />
     <Compile Include="Models\ReferenceDataResponse.cs" />
     <Compile Include="Models\ResponseError.cs" />
-    <Compile Include="Models\SecurityError.cs" />
-    <Compile Include="Models\SessionDecorator.cs" />
     <Compile Include="Models\IntradayBarResponse.cs" />
     <Compile Include="Models\IntradayTickResponse.cs" />
     <Compile Include="Models\TickerResponseError.cs" />
-    <Compile Include="Models\TickerSecurityError.cs" />
     <Compile Include="Requests\HistoricalDataRequest.cs" />
     <Compile Include="Models\IntradayBar.cs" />
     <Compile Include="Requests\IntradayBarRequest.cs" />
@@ -117,7 +115,6 @@
     <Compile Include="Requests\IntradayTickRequest.cs" />
     <Compile Include="Messages\EventArgsException.cs" />
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
-    <Compile Include="Messages\SubscriptionFailureEventArgs.cs" />
     <Compile Include="Models\TokenGenerationFailure.cs" />
     <Compile Include="Identifiers\MessageTypeNames.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

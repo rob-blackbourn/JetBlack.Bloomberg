@@ -53,8 +53,16 @@ namespace JetBlack.Bloomberg.Managers
 
                 if (MessageTypeNames.TokenGenerationFailure.Equals(message.MessageType))
                 {
-                    var reason = message.GetElement(ElementNames.Reason);
-                    asyncPattern.OnFailure(new ContentException<TokenGenerationFailure>(reason.ToTokenGenerationFailureEventArgs()));
+                    var reasonElement = message.GetElement(ElementNames.Reason);
+
+                    var error = new ResponseError(
+                        reasonElement.GetElementAsString(ElementNames.Source),
+                        reasonElement.GetElementAsString(ElementNames.Category),
+                        reasonElement.GetElementAsString(ElementNames.SubCategory),
+                        reasonElement.GetElementAsInt32(ElementNames.ErrorCode),
+                        reasonElement.GetElementAsString(ElementNames.Description));
+
+                    asyncPattern.OnFailure(new ContentException<ResponseError>(error));
                 }
                 else if (MessageTypeNames.TokenGenerationSuccess.Equals(message.MessageType))
                     asyncPattern.OnSuccess(message.GetElementAsString(ElementNames.Token));

@@ -50,9 +50,18 @@ namespace JetBlack.Bloomberg.Managers
 
             if (message.HasElement(ElementNames.ResponseError))
             {
+                var responseErrorElement = message.GetElement(ElementNames.ResponseError);
+                var responseError = new ResponseError(
+                    responseErrorElement.GetElementAsString(ElementNames.Source),
+                    responseErrorElement.GetElementAsString(ElementNames.Category),
+                    responseErrorElement.GetElementAsString(ElementNames.SubCategory),
+                    responseErrorElement.GetElementAsInt32(ElementNames.Code),
+                    responseErrorElement.GetElementAsString(ElementNames.Message));
+                observer.OnError(new ContentException<ResponseError>(responseError));
+
                 // We assume no more messages will be delivered for this correlation id.
-                observer.OnError(new ContentException<ResponseError>(message.GetElement(ElementNames.ResponseError).ToResponseError()));
                 Observers.Remove(message.CorrelationID);
+
                 return;
             }
 
@@ -66,7 +75,15 @@ namespace JetBlack.Bloomberg.Managers
                 
                 if (security.HasElement(ElementNames.SecurityError))
                 {
-                    referenceDataResponse.Add(ticker, Either.Left<SecurityError,FieldData>(security.GetElement(ElementNames.SecurityError).ToSecurityError()));
+                    var securityErrorElement = security.GetElement(ElementNames.SecurityError);
+                    var responseError = new ResponseError(
+                        securityErrorElement.GetElementAsString(ElementNames.Source),
+                        securityErrorElement.GetElementAsString(ElementNames.Category),
+                        securityErrorElement.GetElementAsString(ElementNames.SubCategory),
+                        securityErrorElement.GetElementAsInt32(ElementNames.Code),
+                        securityErrorElement.GetElementAsString(ElementNames.Message));
+
+                    referenceDataResponse.Add(ticker, Either.Left<ResponseError,FieldData>(responseError));
                     continue;
                 }
 
@@ -84,7 +101,7 @@ namespace JetBlack.Bloomberg.Managers
                         fieldData.Add(name, value);
                 }
 
-                referenceDataResponse.Add(ticker, Either.Right<SecurityError,FieldData>(fieldData));
+                referenceDataResponse.Add(ticker, Either.Right<ResponseError,FieldData>(fieldData));
             }
 
             observer.OnNext(referenceDataResponse);

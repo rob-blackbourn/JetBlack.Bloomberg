@@ -5,7 +5,6 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
-using JetBlack.Bloomberg.Messages;
 using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Utilities;
 
@@ -51,7 +50,8 @@ namespace JetBlack.Bloomberg.Managers
             if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
                 return;
 
-            observer.OnNext(new SubscriptionResponse(message.TopicName, message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue())));
+            IDictionary<string, object> data = message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue());
+            observer.OnNext(new SubscriptionResponse(message.TopicName, data));
         }
 
         public void ProcessSubscriptionStatus(Session session, Message message)
@@ -62,8 +62,15 @@ namespace JetBlack.Bloomberg.Managers
 
             if (MessageTypeNames.SubscriptionFailure.Equals(message.MessageType))
             {
-                _subscriptions.Remove(message.CorrelationID);
-                observer.OnError(new EventArgsException<SubscriptionFailureEventArgs>(message.ToSubscriptionFailureEventArgs()));
+                var reasonElement = message.GetElement(ElementNames.Reason);
+                var error = new ResponseError(
+                    reasonElement.GetElement(ElementNames.Source).GetValueAsString(),
+                    reasonElement.GetElement(ElementNames.Category).GetValueAsString(),
+                    null,
+                    reasonElement.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
+                    reasonElement.GetElement(ElementNames.Description).GetValueAsString());
+                var subscriptionFailure = new SubscriptionFailure(error);
+                observer.OnNext(new SubscriptionResponse(message.TopicName, subscriptionFailure));
             }
             else if (MessageTypeNames.SubscriptionTerminated.Equals(message.MessageType))
             {
@@ -71,9 +78,15 @@ namespace JetBlack.Bloomberg.Managers
                 switch (reason.GetElementAsString(ElementNames.Category))
                 {
                     case "LIMIT":
-                        _subscriptions.Remove(message.CorrelationID);
-                        observer.OnError(new EventArgsException<SubscriptionFailureEventArgs>("Concurrent subscription limit has been exceeded.", message.ToSubscriptionFailureEventArgs()));
+                        var responseError = new ResponseError(
+                            reason.GetElement(ElementNames.Source).GetValueAsString(),
+                            reason.GetElement(ElementNames.Category).GetValueAsString(),
+                            null,
+                            reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
+                            reason.GetElement(ElementNames.Description).GetValueAsString());
+                        observer.OnNext(new SubscriptionResponse(message.TopicName, new SubscriptionFailure(responseError)));
                         break;
+
                     case "UNCLASSIFIED":
                         /*
                          * "Failed to obtain initial paint"
@@ -83,6 +96,7 @@ namespace JetBlack.Bloomberg.Managers
                          * ticks.
                          */
                         break;
+
                     case "CANCELED":
                         _subscriptions.Remove(message.CorrelationID);
                         observer.OnCompleted();
@@ -91,20 +105,26 @@ namespace JetBlack.Bloomberg.Managers
             }
             else if (MessageTypeNames.SubscriptionStarted.Equals(message.MessageType))
             {
-                //if (message.HasElement(ElementNames.Exceptions))
-                //{
-                //    // Field subscription failures
-                //    var fieldExceptions = new List<KeyValuePair<string, Failure>>();
-
-                //    var exceptions = message.GetElement(ElementNames.Exceptions);
-                //    for (var i = 0; i < exceptions.NumValues; ++i)
-                //    {
-                //        var exception = exceptions.GetValueAsElement(i);
-                //        fieldExceptions.Add(KeyValuePair.Create(exception.GetElement(ElementNames.FieldId).GetValueAsString(), new Failure(exception.GetElement(ElementNames.Reason))));
-                //    }
-
-                //    observer.OnNext(new SessionTopicStatusMessage(session, message.TopicName, fieldExceptions));
-                //}
+                if (message.HasElement(ElementNames.Exceptions))
+                {
+                    var fieldErrors = new Dictionary<string, ResponseError>();
+                    var exceptionsArrayElement = message.GetElement(ElementNames.Exceptions);
+                    for (var i = 0; i < exceptionsArrayElement.NumValues; ++i)
+                    {
+                        var exceptionsElement = exceptionsArrayElement.GetValueAsElement(i);
+                        var fieldId = exceptionsElement.GetElementAsString(ElementNames.FieldId);
+                        var reasonElement = exceptionsElement.GetElement(ElementNames.Reason);
+                        var error = new ResponseError(
+                            reasonElement.GetElement(ElementNames.Source).GetValueAsString(),
+                            reasonElement.GetElement(ElementNames.Category).GetValueAsString(),
+                            reasonElement.GetElement(ElementNames.SubCategory).GetValueAsString(),
+                            reasonElement.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
+                            reasonElement.GetElement(ElementNames.Description).GetValueAsString());
+                        fieldErrors.Add(fieldId, error);
+                    }
+                    var subscriptionFailure = new SubscriptionFailure(fieldErrors);
+                    observer.OnNext(new SubscriptionResponse(message.TopicName, subscriptionFailure));
+                }
             }
         }
     }

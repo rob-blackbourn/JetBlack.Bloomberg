@@ -3,7 +3,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Models
 {
-    public class HistoricalDataResponse : Dictionary<string, Either<SecurityError, HistoricalData>>
+    public class HistoricalDataResponse : Dictionary<string, Either<ResponseError, HistoricalData>>
     {
     }
 }

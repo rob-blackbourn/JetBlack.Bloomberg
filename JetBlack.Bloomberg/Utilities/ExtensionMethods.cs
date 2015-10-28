@@ -126,49 +126,6 @@ namespace JetBlack.Bloomberg.Utilities
 
             return eids;
         }
-
-        public static TokenGenerationFailure ToTokenGenerationFailureEventArgs(this Element reason)
-        {
-            return
-                new TokenGenerationFailure(
-                    reason.GetElementAsString(ElementNames.Source),
-                    reason.GetElementAsInt32(ElementNames.ErrorCode),
-                    reason.GetElementAsString(ElementNames.Category),
-                    reason.GetElementAsString(ElementNames.SubCategory),
-                    reason.GetElementAsString(ElementNames.Description));
-        }
-
-        public static SubscriptionFailureEventArgs ToSubscriptionFailureEventArgs(this Message message)
-        {
-            var reason = message.GetElement(ElementNames.Reason);
-            return new SubscriptionFailureEventArgs(message.TopicName,
-                reason.GetElement(ElementNames.Source).GetValueAsString(),
-                reason.GetElement(ElementNames.Category).GetValueAsString(),
-                reason.GetElement(ElementNames.ErrorCode).GetValueAsInt32(),
-                reason.GetElement(ElementNames.Description).GetValueAsString());
-        }
-
-        public static SecurityError ToSecurityError(this Element securityError)
-        {
-            return
-                new SecurityError(
-                    securityError.GetElementAsString(ElementNames.Source), 
-                    securityError.GetElementAsString(ElementNames.Category),
-                    securityError.GetElementAsString(ElementNames.SubCategory),
-                    securityError.GetElementAsInt32(ElementNames.Code),
-                    securityError.GetElementAsString(ElementNames.Message));
-        }
-
-        public static ResponseError ToResponseError(this Element response)
-        {
-            return
-                new ResponseError(
-                    response.GetElementAsString(ElementNames.Source),
-                    response.GetElementAsString(ElementNames.Category),
-                    response.GetElementAsString(ElementNames.SubCategory),
-                    response.GetElementAsInt32(ElementNames.Code),
-                    response.GetElementAsString(ElementNames.Message));
-        }
     }
 
     internal static class KeyValuePair
