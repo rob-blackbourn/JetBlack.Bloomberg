@@ -12,7 +12,7 @@ using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class HistoricalDataManager : RequestResponseManager<HistoricalDataRequest, HistoricalDataResponse>, IHistoricalDataProvider
+    internal class HistoricalDataManager : RequestResponseManager<HistoricalDataRequest, HistoricalDataResponse, object>, IHistoricalDataProvider
     {
         public HistoricalDataManager(Session session, Service service, Identity identity)
             : base(session, service, identity)
@@ -24,7 +24,7 @@ namespace JetBlack.Bloomberg.Managers
             return Observable.Create<HistoricalDataResponse>(observer =>
             {
                 var correlationId = new CorrelationID();
-                Observers.Add(correlationId, observer);
+                Add(correlationId, observer);
                 Session.SendRequest(request.ToRequest(Service), Identity, correlationId);
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });
@@ -38,7 +38,7 @@ namespace JetBlack.Bloomberg.Managers
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             IObserver<HistoricalDataResponse> observer;
-            if (!Observers.TryGetValue(message.CorrelationID, out observer))
+            if (!TryGet(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
@@ -55,7 +55,7 @@ namespace JetBlack.Bloomberg.Managers
                     responseErrorElement.GetElementAsString(ElementNames.Message));
                 observer.OnError(new ContentException<ResponseError>(error));
                 // We assume that no more messages will be sent on this correlation id.
-                Observers.Remove(message.CorrelationID);
+                Remove(message.CorrelationID);
                 return;
             }
 
@@ -118,7 +118,7 @@ namespace JetBlack.Bloomberg.Managers
             if (!isPartialResponse)
             {
                 observer.OnCompleted();
-                Observers.Remove(message.CorrelationID);
+                Remove(message.CorrelationID);
             }
         }
     }

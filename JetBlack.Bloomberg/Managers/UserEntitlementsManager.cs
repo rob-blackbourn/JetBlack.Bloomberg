@@ -8,7 +8,7 @@ using JetBlack.Bloomberg.Models;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class UserEntitlementsManager : RequestResponseManager<UserEntitlementsRequest, UserEntitlementsResponse>, IUserEntitlementsProvider
+    internal class UserEntitlementsManager : RequestResponseManager<UserEntitlementsRequest, UserEntitlementsResponse, object>, IUserEntitlementsProvider
     {
         public UserEntitlementsManager(Session session, Service service, Identity identity)
             : base(session, service, identity)
@@ -24,7 +24,7 @@ namespace JetBlack.Bloomberg.Managers
                 userInfoElement.SetElement(ElementNames.Uuid, userEntitlementsRequest.Uuid);
 
                 var correlationId = new CorrelationID();
-                Observers.Add(correlationId, observer);
+                Add(correlationId, observer);
 
                 Session.SendRequest(request, Identity, correlationId);
 
@@ -40,7 +40,7 @@ namespace JetBlack.Bloomberg.Managers
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             IObserver<UserEntitlementsResponse> observer;
-            if (!Observers.TryGetValue(message.CorrelationID, out observer))
+            if (!TryGet(message.CorrelationID, out observer))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));
                 return;
@@ -58,7 +58,7 @@ namespace JetBlack.Bloomberg.Managers
                 if (!isPartialResponse)
                 {
                     observer.OnCompleted();
-                    Observers.Remove(message.CorrelationID);
+                    Remove(message.CorrelationID);
                 }
             }
             else

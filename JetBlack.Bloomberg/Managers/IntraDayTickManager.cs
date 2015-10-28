@@ -11,10 +11,8 @@ using JetBlack.Bloomberg.Utilities;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class IntradayTickManager : RequestResponseManager<IntradayTickRequest, IntradayTickResponse>, IIntradayTickProvider
+    internal class IntradayTickManager : RequestResponseManager<IntradayTickRequest, IntradayTickResponse, string>, IIntradayTickProvider
     {
-        private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>(); 
-
         public IntradayTickManager(Session session, Service service, Identity identity)
             : base(session, service, identity)
         {
@@ -25,8 +23,7 @@ namespace JetBlack.Bloomberg.Managers
             return Observable.Create<IntradayTickResponse>(observer =>
             {
                 var correlationId = new CorrelationID();
-                Observers.Add(correlationId, observer);
-                _tickerMap.Add(correlationId, request.Ticker);
+                Add(correlationId, observer, request.Ticker);
                 Session.SendRequest(request.ToRequest(Service), Identity, correlationId);
 
                 return Disposable.Create(() => Session.Cancel(correlationId));
@@ -41,14 +38,12 @@ namespace JetBlack.Bloomberg.Managers
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             IObserver<IntradayTickResponse> observer;
-            if (!Observers.TryGetValue(message.CorrelationID, out observer))
+            string ticker;
+            if (!TryGet(message.CorrelationID, out observer, out ticker))
             {
                 onFailure(session, message, new Exception("Unable to find handler for correlation id: " + message.CorrelationID));
                 return;
             }
-
-            var ticker = _tickerMap[message.CorrelationID];
-            _tickerMap.Remove(message.CorrelationID);
 
             if (message.HasElement(ElementNames.ResponseError))
             {
@@ -62,7 +57,7 @@ namespace JetBlack.Bloomberg.Managers
                 observer.OnError(new ContentException<TickerResponseError>(new TickerResponseError(ticker, responseError)));
 
                 // We assume no more messages will be delivered for this correlation id.
-                Observers.Remove(message.CorrelationID);
+                Remove(message.CorrelationID);
 
                 return;
             }
@@ -93,7 +88,7 @@ namespace JetBlack.Bloomberg.Managers
             if (!isPartialResponse)
             {
                 observer.OnCompleted();
-                Observers.Remove(message.CorrelationID);
+                Remove(message.CorrelationID);
             }
         }
     }

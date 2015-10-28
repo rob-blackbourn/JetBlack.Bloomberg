@@ -6,10 +6,25 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class ObserverManager<TResponse> : Manager
     {
-        protected readonly IDictionary<CorrelationID, IObserver<TResponse>> Observers = new Dictionary<CorrelationID, IObserver<TResponse>>();
+        private readonly IDictionary<CorrelationID, IObserver<TResponse>> _observers = new Dictionary<CorrelationID, IObserver<TResponse>>();
 
         public ObserverManager(Session session) : base(session)
         {
+        }
+
+        public void Add(CorrelationID correlationId, IObserver<TResponse> observer)
+        {
+            _observers.Add(correlationId, observer);
+        }
+
+        public virtual void Remove(CorrelationID correlationId)
+        {
+            _observers.Remove(correlationId);
+        }
+
+        public bool TryGet(CorrelationID correlationId, out IObserver<TResponse> observer)
+        {
+            return _observers.TryGetValue(correlationId, out observer);
         }
     }
 }

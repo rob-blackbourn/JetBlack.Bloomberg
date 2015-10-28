@@ -9,10 +9,8 @@ using JetBlack.Bloomberg.Utilities;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class SecurityEntitlementsManager : RequestResponseManager<SecurityEntitlementsRequest, SecurityEntitlementsResponse>, ISecurityEntitlementsProvider
+    internal class SecurityEntitlementsManager : RequestResponseManager<SecurityEntitlementsRequest, SecurityEntitlementsResponse, IList<string>>, ISecurityEntitlementsProvider
     {
-        private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
-
         public SecurityEntitlementsManager(Session session, Service service, Identity identity)
             : base(session, service, identity)
         {
@@ -32,8 +30,7 @@ namespace JetBlack.Bloomberg.Managers
                 });
 
                 var correlationId = new CorrelationID();
-                Observers.Add(correlationId, observer);
-                _tickerMap.Add(correlationId, securities);
+                Add(correlationId, observer, securities);
 
                 Session.SendRequest(request, Identity, correlationId);
 
@@ -49,14 +46,12 @@ namespace JetBlack.Bloomberg.Managers
         public override void ProcessResponse(Session session, Message message, bool isPartialResponse, Action<Session, Message, Exception> onFailure)
         {
             IObserver<SecurityEntitlementsResponse> observer;
-            if (!Observers.TryGetValue(message.CorrelationID, out observer))
+            IList<string> tickers;
+            if (!TryGet(message.CorrelationID, out observer, out tickers))
             {
                 onFailure(session, message, new ApplicationException("Failed to find handler"));
                 return;
             }
-
-            var tickers = _tickerMap[message.CorrelationID];
-            _tickerMap.Remove(message.CorrelationID);
 
             var securityEntitlementsResponse = new SecurityEntitlementsResponse();
 
@@ -84,7 +79,7 @@ namespace JetBlack.Bloomberg.Managers
                 if (!isPartialResponse)
                 {
                     observer.OnCompleted();
-                    Observers.Remove(message.CorrelationID);
+                    Remove(message.CorrelationID);
                 }
             }
             else
