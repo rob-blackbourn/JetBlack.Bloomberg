@@ -34,7 +34,13 @@ classes. This makes the intentions of overloaded methods clearer, and makes the 
 
 ## Usage
 
-There's a program to look at, but here's a quick example:
+### Quick example
+
+Here's a quick example of how to connect, and request some data. There are a couple of points of interest.
+
+* We need to pass in an authenticator and request authentication when the session has started.
+* We need to wait for initialisation to be complete before we can request data.
+
 
 ```cs
 var sessionOptions = new SessionOptions
@@ -65,6 +71,70 @@ _bloomberg.InitialisationStatus += (sender, eventArgs) =>
 _bloomberg.StartAsync();
 ```
 
+### Subscribing to real time data
+
+```cs
+_bloomberg.ToObservable(new[] { new SubscriptionRequest("VOD LN Equity", new[] { "BID", "ASK" }) })
+    .ObserveOn(TaskPoolScheduler.Default)
+    .Subscribe(
+        response =>
+        {
+            Console.WriteLine("Subscription Received.");
+            Console.WriteLine("{0} - [{1}]", response.Ticker, string.Join(",", response.Data.Select(x => string.Format("{0}: {1}", x.Key, x.Value))));
+        },
+        error => Console.WriteLine("Subscription Error: {0}", error),
+        () => Console.WriteLine("Subscription Completed."));
+```
+
+### Requesting reference data
+
+```cs
+_bloomberg.ToObservable(ReferenceDataRequest.Create(new[] { "VOD LN Equity", "TSCO LN Equity" }, new[] { "PX_LAST" }))
+    .Subscribe(
+        response =>
+        {
+            Console.WriteLine("Reference Data Received.");
+            foreach (var item in response)
+            {
+                if (item.Value.IsLeft)
+                    Console.WriteLine("Ticker={0}, Error={1}", item.Key, item.Value.Left);
+                else
+                    Console.WriteLine("{0} - [{1}]", item.Key, string.Join(",", item.Value.Right.Select(x => string.Format("{0}: {1}", x.Key, x.Value))));
+            }
+        },
+        error => Console.WriteLine("Reference Data Error: {0}", error),
+        () => Console.WriteLine("Reference Data Completed."));
+```
+
+### Requesting historical data
+
+```cs
+_bloomberg.ToObservable(HistoricalDataRequest.Create(new[] { "VOD LN Equity", "TSCO LN Equity" }, new[] { "PX_LAST" }, DateTime.Today.AddMonths(-2), DateTime.Today, PeriodicitySelection.DAILY))
+    .Subscribe(
+        response =>
+        {
+            Console.WriteLine("Historical Data Received");
+            foreach (var item in response)
+            {
+                if (item.Value.IsLeft)
+                {
+                    Console.WriteLine("Ticker={0}, SecurityError={1}", item.Key, item.Value.Left);
+                }
+                else
+                {
+                    Console.WriteLine("Ticker={0}", item.Key);
+                    foreach (var dateAndFields in item.Value.Right)
+                    {
+                        Console.WriteLine("  Date: {0}", dateAndFields.Key);
+                        foreach (var nameAndValue in dateAndFields.Value)
+                            Console.WriteLine("    {0}: {1}", nameAndValue.Key, nameAndValue.Value);
+                    }
+                }
+            }
+        },
+        error => Console.WriteLine("Historical Data Error: {0}", error),
+        () => Console.WriteLine("Historical Data Completed."));
+```
 ## Notes
 
 I wanted to make the library entirely asynchronous. To keep this simple I have used
