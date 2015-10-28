@@ -10,11 +10,9 @@ using JetBlack.Bloomberg.Utilities;
 
 namespace JetBlack.Bloomberg.Managers
 {
-    internal class SubscriptionManager : Manager, ISubscriptionProvider
+    internal class SubscriptionManager : ObserverManager<SubscriptionResponse>, ISubscriptionProvider
     {
         private readonly Identity _identity;
-
-        private readonly IDictionary<CorrelationID, IObserver<SubscriptionResponse>> _subscriptions = new Dictionary<CorrelationID, IObserver<SubscriptionResponse>>();
 
         public SubscriptionManager(Session session, Identity identity)
             : base(session)
@@ -30,7 +28,7 @@ namespace JetBlack.Bloomberg.Managers
                 foreach (var subscriptionRequest in subscriptionRequests)
                 {
                     var correlationId = new CorrelationID();
-                    _subscriptions.Add(correlationId, observer);
+                    Add(correlationId, observer);
 
                     subscriptions.Add(new Subscription(subscriptionRequest.Security, subscriptionRequest.Fields, correlationId));
                 }
@@ -38,7 +36,7 @@ namespace JetBlack.Bloomberg.Managers
 
                 return Disposable.Create(() =>
                 {
-                    subscriptions.ForEach(x => _subscriptions.Remove(x.CorrelationID));
+                    subscriptions.ForEach(x => Remove(x.CorrelationID));
                     Session.Unsubscribe(subscriptions);
                 });
             });
@@ -47,7 +45,7 @@ namespace JetBlack.Bloomberg.Managers
         public void ProcessSubscriptionData(Session session, Message message)
         {
             IObserver<SubscriptionResponse> observer;
-            if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
+            if (!TryGet(message.CorrelationID, out observer))
                 return;
 
             IDictionary<string, object> data = message.Elements.ToDictionary(x => x.Name.ToString(), y => y.GetFieldValue());
@@ -57,7 +55,7 @@ namespace JetBlack.Bloomberg.Managers
         public void ProcessSubscriptionStatus(Session session, Message message)
         {
             IObserver<SubscriptionResponse> observer;
-            if (!_subscriptions.TryGetValue(message.CorrelationID, out observer))
+            if (!TryGet(message.CorrelationID, out observer))
                 return;
 
             if (MessageTypeNames.SubscriptionFailure.Equals(message.MessageType))
@@ -98,7 +96,7 @@ namespace JetBlack.Bloomberg.Managers
                         break;
 
                     case "CANCELED":
-                        _subscriptions.Remove(message.CorrelationID);
+                        Remove(message.CorrelationID);
                         observer.OnCompleted();
                         break;
                 }
