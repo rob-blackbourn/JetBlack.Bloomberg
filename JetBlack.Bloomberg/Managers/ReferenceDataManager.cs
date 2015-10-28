@@ -13,14 +13,9 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class ReferenceDataManager : RequestResponseManager<ReferenceDataRequest, ReferenceDataResponse>, IReferenceDataProvider
     {
-        private readonly Service _service;
-        private readonly Identity _identity;
-
         public ReferenceDataManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, service, identity)
         {
-            _service = service;
-            _identity = identity;
         }
 
         public override IObservable<ReferenceDataResponse> ToObservable(ReferenceDataRequest request)
@@ -29,7 +24,7 @@ namespace JetBlack.Bloomberg.Managers
             {
                 var correlationId = new CorrelationID();
                 Observers.Add(correlationId, observer);
-                Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                Session.SendRequest(request.ToRequest(Service), Identity, correlationId);
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }

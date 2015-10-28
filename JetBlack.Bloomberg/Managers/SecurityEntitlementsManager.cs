@@ -11,23 +11,18 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class SecurityEntitlementsManager : RequestResponseManager<SecurityEntitlementsRequest, SecurityEntitlementsResponse>, ISecurityEntitlementsProvider
     {
-        private readonly Service _service;
-        private readonly Identity _identity;
-
         private readonly IDictionary<CorrelationID, IList<string>> _tickerMap = new Dictionary<CorrelationID, IList<string>>(); 
 
         public SecurityEntitlementsManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, service, identity)
         {
-            _service = service;
-            _identity = identity;
         }
 
         public override IObservable<SecurityEntitlementsResponse> ToObservable(SecurityEntitlementsRequest securityEntitlementsRequest)
         {
             return Observable.Create<SecurityEntitlementsResponse>(observer =>
             {
-                var request = _service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
+                var request = Service.CreateRequest(OperationNames.SecurityEntitlementsRequest);
                 var securitiesElement = request.GetElement(ElementNames.Securities);
                 var securities = new List<string>();
                 securityEntitlementsRequest.Tickers.ForEach(ticker =>
@@ -40,7 +35,7 @@ namespace JetBlack.Bloomberg.Managers
                 Observers.Add(correlationId, observer);
                 _tickerMap.Add(correlationId, securities);
 
-                Session.SendRequest(request, _identity, correlationId);
+                Session.SendRequest(request, Identity, correlationId);
 
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });

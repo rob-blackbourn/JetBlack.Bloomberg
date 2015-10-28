@@ -13,16 +13,11 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class IntradayBarManager : RequestResponseManager<IntradayBarRequest, IntradayBarResponse>, IIntradayBarProvider
     {
-        private readonly Service _service;
-        private readonly Identity _identity;
-
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>();
 
         public IntradayBarManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, service, identity)
         {
-            _service = service;
-            _identity = identity;
         }
 
         public override IObservable<IntradayBarResponse> ToObservable(IntradayBarRequest request)
@@ -32,7 +27,7 @@ namespace JetBlack.Bloomberg.Managers
                 var correlationId = new CorrelationID();
                 Observers.Add(correlationId, observer);
                 _tickerMap.Add(correlationId, request.Ticker);
-                Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                Session.SendRequest(request.ToRequest(Service), Identity, correlationId);
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });
         }

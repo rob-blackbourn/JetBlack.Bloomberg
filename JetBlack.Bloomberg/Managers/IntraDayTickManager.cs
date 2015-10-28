@@ -13,16 +13,11 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class IntradayTickManager : RequestResponseManager<IntradayTickRequest, IntradayTickResponse>, IIntradayTickProvider
     {
-        private readonly Service _service;
-        private readonly Identity _identity; 
-        
         private readonly IDictionary<CorrelationID, string> _tickerMap = new Dictionary<CorrelationID, string>(); 
 
         public IntradayTickManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, service, identity)
         {
-            _service = service;
-            _identity = identity;
         }
 
         public override IObservable<IntradayTickResponse> ToObservable(IntradayTickRequest request)
@@ -32,7 +27,7 @@ namespace JetBlack.Bloomberg.Managers
                 var correlationId = new CorrelationID();
                 Observers.Add(correlationId, observer);
                 _tickerMap.Add(correlationId, request.Ticker);
-                Session.SendRequest(request.ToRequest(_service), _identity, correlationId);
+                Session.SendRequest(request.ToRequest(Service), Identity, correlationId);
 
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });

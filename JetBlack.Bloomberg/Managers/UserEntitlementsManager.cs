@@ -10,28 +10,23 @@ namespace JetBlack.Bloomberg.Managers
 {
     internal class UserEntitlementsManager : RequestResponseManager<UserEntitlementsRequest, UserEntitlementsResponse>, IUserEntitlementsProvider
     {
-        private readonly Service _service;
-        private readonly Identity _identity;
-
         public UserEntitlementsManager(Session session, Service service, Identity identity)
-            : base(session)
+            : base(session, service, identity)
         {
-            _service = service;
-            _identity = identity;
         }
 
         public override IObservable<UserEntitlementsResponse> ToObservable(UserEntitlementsRequest userEntitlementsRequest)
         {
             return Observable.Create<UserEntitlementsResponse>(observer =>
             {
-                var request = _service.CreateRequest(OperationNames.UserEntitlementsRequest);
+                var request = Service.CreateRequest(OperationNames.UserEntitlementsRequest);
                 var userInfoElement = request.GetElement(ElementNames.UserInfo);
                 userInfoElement.SetElement(ElementNames.Uuid, userEntitlementsRequest.Uuid);
 
                 var correlationId = new CorrelationID();
                 Observers.Add(correlationId, observer);
 
-                Session.SendRequest(request, _identity, correlationId);
+                Session.SendRequest(request, Identity, correlationId);
 
                 return Disposable.Create(() => Session.Cancel(correlationId));
             });
