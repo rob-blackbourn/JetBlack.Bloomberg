@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
+using JetBlack.Bloomberg.Responses;
 
 namespace JetBlack.Bloomberg
 {

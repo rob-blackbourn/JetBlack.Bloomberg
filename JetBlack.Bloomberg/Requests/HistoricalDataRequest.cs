@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
-using JetBlack.Bloomberg.Models;
+using JetBlack.Bloomberg.Responses;
 
 namespace JetBlack.Bloomberg.Requests
 {
@@ -39,8 +39,8 @@ namespace JetBlack.Bloomberg.Requests
                 EndDate = endDate,
                 PeriodicitySelection = periodicitySelection,
                 PeriodicityAdjustment = PeriodicityAdjustment.ACTUAL,
-                NonTradingDayFillOption = Models.NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
-                NonTradingDayFillMethod = Models.NonTradingDayFillMethod.NIL_VALUE,
+                NonTradingDayFillOption = Responses.NonTradingDayFillOption.ACTIVE_DAYS_ONLY,
+                NonTradingDayFillMethod = Responses.NonTradingDayFillMethod.NIL_VALUE,
             };
         }
 

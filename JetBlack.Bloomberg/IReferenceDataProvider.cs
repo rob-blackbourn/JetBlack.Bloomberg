@@ -1,6 +1,6 @@
 ﻿using System;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
+using JetBlack.Bloomberg.Responses;
 
 namespace JetBlack.Bloomberg
 {

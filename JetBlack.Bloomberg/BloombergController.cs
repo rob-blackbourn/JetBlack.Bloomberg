@@ -7,8 +7,8 @@ using JetBlack.Bloomberg.Authenticators;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Managers;
 using JetBlack.Bloomberg.Messages;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
+using JetBlack.Bloomberg.Responses;
 using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 
@@ -275,10 +275,10 @@ namespace JetBlack.Bloomberg
                 switch (message.MessageType.ToString())
                 {
                     case "SlowConsumerWarning":
-                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Models.AdminStatus.SlowConsumerWarning));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Responses.AdminStatus.SlowConsumerWarning));
                         break;
                     case "SlowConsumerWarningCleared":
-                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Models.AdminStatus.SlowConsumerWarningCleared));
+                        RaiseEvent(AdminStatus, new EventArgs<AdminStatus>(Responses.AdminStatus.SlowConsumerWarningCleared));
                         break;
                 }
             }
@@ -300,15 +300,15 @@ namespace JetBlack.Bloomberg
         private void ProcessSessionStatus(Message message)
         {
             if (MessageTypeNames.SessionStarted.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.Started));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Responses.SessionStatus.Started));
             if (MessageTypeNames.SessionTerminated.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.Terminated));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Responses.SessionStatus.Terminated));
             if (MessageTypeNames.SessionStartupFailure.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.StartupFailure));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Responses.SessionStatus.StartupFailure));
             if (MessageTypeNames.SessionConnectionUp.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.ConnectionUp));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Responses.SessionStatus.ConnectionUp));
             if (MessageTypeNames.SessionConnectionDown.Equals(message.MessageType))
-                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Models.SessionStatus.ConnectionDown));
+                RaiseEvent(SessionStatus, new EventArgs<SessionStatus>(Responses.SessionStatus.ConnectionDown));
         }
     }
 }

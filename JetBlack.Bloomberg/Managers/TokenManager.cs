@@ -2,9 +2,8 @@
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Patterns;
-using JetBlack.Bloomberg.Utilities;
+using JetBlack.Bloomberg.Responses;
 using JetBlack.Monads;
 
 namespace JetBlack.Bloomberg.Managers

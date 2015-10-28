@@ -5,8 +5,8 @@ using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Exceptions;
 using JetBlack.Bloomberg.Identifiers;
-using JetBlack.Bloomberg.Models;
 using JetBlack.Bloomberg.Requests;
+using JetBlack.Bloomberg.Responses;
 using JetBlack.Bloomberg.Utilities;
 using JetBlack.Monads;
 

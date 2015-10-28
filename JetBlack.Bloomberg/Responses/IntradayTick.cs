@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace JetBlack.Bloomberg.Models
+namespace JetBlack.Bloomberg.Responses
 {
     public class IntradayTick
     {

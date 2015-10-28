@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace JetBlack.Bloomberg.Models
+namespace JetBlack.Bloomberg.Responses
 {
     public class IntradayBar
     {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using JetBlack.Monads;
 
-namespace JetBlack.Bloomberg.Models
+namespace JetBlack.Bloomberg.Responses
 {
     public class SubscriptionResponse
     {
