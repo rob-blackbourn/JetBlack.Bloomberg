@@ -65,15 +65,15 @@ namespace JetBlack.Bloomberg.Managers
             var tickData = message.GetElement("tickData").GetElement("tickData");
 
             var entitlementIds = tickData.HasElement("eidData") ? tickData.GetElement("eidData").ExtractEids() : null;
-            var intradayTickResponse = new IntradayTickResponse(ticker, new List<IntradayTick>(), entitlementIds);
 
+            var intradayTicks = new List<IntradayTick>();
             for (var i = 0; i < tickData.NumValues; ++i)
             {
                 var item = tickData.GetValueAsElement(i);
                 var conditionCodes = (item.HasElement("conditionCodes") ? item.GetElementAsString("conditionCodes").Split(',') : null);
                 var exchangeCodes = (item.HasElement("exchangeCode") ? item.GetElementAsString("exchangeCode").Split(',') : null);
 
-                intradayTickResponse.IntraDayTicks.Add(
+                intradayTicks.Add(
                     new IntradayTick(
                         item.GetElementAsDatetime("time").ToDateTime(),
                         (EventType)Enum.Parse(typeof(EventType), item.GetElementAsString("type"), true),
@@ -82,6 +82,8 @@ namespace JetBlack.Bloomberg.Managers
                         conditionCodes,
                         exchangeCodes));
             }
+
+            var intradayTickResponse = new IntradayTickResponse(ticker, intradayTicks, entitlementIds);
 
             observer.OnNext(intradayTickResponse);
 
