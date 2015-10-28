@@ -52,7 +52,6 @@ namespace JetBlack.Bloomberg.Managers
             }
 
             var ticker = _tickerMap[message.CorrelationID];
-            _tickerMap.Remove(message.CorrelationID);
 
             if (message.HasElement(ElementNames.ResponseError))
             {
@@ -67,6 +66,7 @@ namespace JetBlack.Bloomberg.Managers
 
                 // We assume nore more messages will be sent for this correlation id.
                 Observers.Remove(message.CorrelationID);
+                _tickerMap.Remove(message.CorrelationID);
 
                 return;
             }
@@ -74,14 +74,14 @@ namespace JetBlack.Bloomberg.Managers
             var barDataElement = message.GetElement(ElementNames.BarData);
 
             var entitlementIds = barDataElement.HasElement(ElementNames.EidData) ? barDataElement.GetElement(ElementNames.EidData).ExtractEids() : null;
-            var intradayBarResponse = new IntradayBarResponse(ticker, new List<IntradayBar>(), entitlementIds);
 
             var barTickDataArrayElement = barDataElement.GetElement(ElementNames.BarTickData);
 
+            var intradayBars = new List<IntradayBar>();
             for (var i = 0; i < barTickDataArrayElement.NumValues; ++i)
             {
                 var barTickDataElement = barTickDataArrayElement.GetValueAsElement(i);
-                intradayBarResponse.IntradayBars.Add(
+                intradayBars.Add(
                     new IntradayBar(
                         barTickDataElement.GetElementAsDatetime(ElementNames.Time).ToDateTime(),
                         barTickDataElement.GetElementAsFloat64(ElementNames.Open),
@@ -89,15 +89,17 @@ namespace JetBlack.Bloomberg.Managers
                         barTickDataElement.GetElementAsFloat64(ElementNames.Low),
                         barTickDataElement.GetElementAsFloat64(ElementNames.Close),
                         barTickDataElement.GetElementAsInt32(ElementNames.NumEvents),
-                        barTickDataElement.GetElementAsInt64(ElementNames.Volume)));
+                        barTickDataElement.GetElementAsInt64(ElementNames.Volume),
+                        barTickDataElement.GetElementAsFloat64(ElementNames.Value)));
             }
 
-            observer.OnNext(intradayBarResponse);
+            observer.OnNext(new IntradayBarResponse(ticker, intradayBars, entitlementIds));
 
             if (!isPartialResponse)
             {
                 observer.OnCompleted();
                 Observers.Remove(message.CorrelationID);
+                _tickerMap.Remove(message.CorrelationID);
             }
         }
     }
