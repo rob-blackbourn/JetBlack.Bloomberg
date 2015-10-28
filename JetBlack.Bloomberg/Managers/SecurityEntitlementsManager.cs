@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Bloomberglp.Blpapi;
 using JetBlack.Bloomberg.Identifiers;
 using JetBlack.Bloomberg.Models;
+using JetBlack.Bloomberg.Requests;
 using JetBlack.Bloomberg.Utilities;
 
 namespace JetBlack.Bloomberg.Managers

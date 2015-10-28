@@ -82,10 +82,10 @@
     <Compile Include="Models\HistoricalDataResponse.cs" />
     <Compile Include="Models\SecurityEntitlements.cs" />
     <Compile Include="Identifiers\OperationNames.cs" />
-    <Compile Include="Models\SecurityEntitlementsRequest.cs" />
+    <Compile Include="Requests\SecurityEntitlementsRequest.cs" />
     <Compile Include="Models\SecurityEntitlementsResponse.cs" />
     <Compile Include="Models\SubscriptionFailure.cs" />
-    <Compile Include="Models\SubscriptionRequest.cs" />
+    <Compile Include="Requests\SubscriptionRequest.cs" />
     <Compile Include="Models\SubscriptionResponse.cs" />
     <Compile Include="Models\UserEntitlementsRequest.cs" />
     <Compile Include="Models\UserEntitlementsResponse.cs" />

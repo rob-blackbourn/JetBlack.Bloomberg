@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using JetBlack.Bloomberg.Models;
+using JetBlack.Bloomberg.Requests;
 
 namespace JetBlack.Bloomberg
 {

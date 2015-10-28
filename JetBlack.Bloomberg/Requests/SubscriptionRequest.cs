@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace JetBlack.Bloomberg.Models
+namespace JetBlack.Bloomberg.Requests
 {
     public class SubscriptionRequest
     {
