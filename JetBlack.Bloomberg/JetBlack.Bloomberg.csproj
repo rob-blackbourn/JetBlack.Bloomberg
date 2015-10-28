@@ -112,7 +112,6 @@
     <Compile Include="Requests\IntradayBarRequest.cs" />
     <Compile Include="Models\IntradayTick.cs" />
     <Compile Include="Requests\IntradayTickRequest.cs" />
-    <Compile Include="Messages\EventArgsException.cs" />
     <Compile Include="Messages\ServiceOpenFailureEventArgs.cs" />
     <Compile Include="Models\TokenGenerationFailure.cs" />
     <Compile Include="Identifiers\MessageTypeNames.cs" />
